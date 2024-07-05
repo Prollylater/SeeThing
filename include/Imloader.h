@@ -34,13 +34,11 @@ void writeImgPng(const char* outputPath,  const Mat<T>& image, bool flip ) {
         std::cerr << "Error, no data to write " <<std::endl;
         return ;
     }
-    const T* data = image.getData();
-
     int width, height,channels;
     width = image.getCols();
     height = image.getRows();
     channels = image.getChannels();
-    int success = stbi_write_png(outputPath, width, height, channels, data, width * channels);
+    int success = stbi_write_png(outputPath, width, height, channels, image.getData(), width * channels);
 
     if (success) {
         std::cout << "Image saved successfully to " << outputPath << std::endl;
@@ -57,13 +55,12 @@ void writeImgJpg(const char* outputPath,  const Mat<T>& image, bool flip ) {
         std::cerr << "Error, no data to write " <<std::endl;
         return ;
     }
-    const T* data = image.getData();
 
     int width, height,channels;
     width = image.getCols();
     height = image.getRows();
     channels = image.getChannels();
-    int success = stbi_write_jpg(outputPath, width, height, channels, data, 90);
+    int success = stbi_write_jpg(outputPath, width, height, channels, image.getData(), 90);
 
     if (success) {
         std::cout << "Image saved successfully to " << outputPath << std::endl;

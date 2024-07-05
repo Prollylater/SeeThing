@@ -28,6 +28,21 @@ struct Vec
     return *this;
   }
 
+  template <typename T2>
+  Vec<T2> convertDt() const
+  {
+    static_assert(std::is_convertible<T, T2>::value,
+                  "Type used in convertDt not convertible to target type");
+    T2 t2x, t2y, t2z;
+
+    t2x = static_cast<T2>(x);
+    t2y = static_cast<T2>(y);
+    t2z = static_cast<T2>(z);
+
+    Vec<T2> newvec(t2x, t2y, t2z);
+    return newvec;
+  };
+
   // Destructor
   ~Vec() {}
 
@@ -37,8 +52,9 @@ struct Vec
     other = Vec();
   }
 
-  T sumComponents(){
-    return x+y+z;
+  T sumComponents()
+  {
+    return x + y + z;
   }
   // Move assignment operator
   Vec &operator=(Vec &&other) noexcept
@@ -113,6 +129,15 @@ struct Vec
     T tmpxz = (z / a);
     return Vec<T>(tmpx, tmpxy, tmpxz);
   }
+
+  
+    friend std::ostream &operator<<(std::ostream &os, const Vec<T> &vec)
+    {
+      os<<  "x: " << vec.x
+      << "y: " << vec.y
+      <<"z: "<<vec.z <<std::endl;
+        return os;
+    }
 };
 
 #include <cmath>

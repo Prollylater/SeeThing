@@ -85,13 +85,25 @@ public:
     Mat(const Mat &otherMat);
 
     // TODO
-    Mat(Mat &&otherMat) noexcept;
+    explicit Mat(Mat &&otherMat) noexcept;
 
     // Functions //
     int getRows() const { return rows; }
     const T *getData() const { return data; }
 
     int getCols() const { return cols; }
+
+    /* int resizedims(int _rows =this->rows,int _cols = this->cols,
+
+     //TODO This
+     int _channels= this->channels)  {
+         //comparison with previous size
+         rows = _rows;
+         cols = _cols;
+         channels = _channels;
+         //new
+      }*/
+
     int getChannels() const { return channels; };
     PixlColorSpace getClrspace() const { return clrspace; };
     void setClrSpace(PixlColorSpace newspace) { clrspace = newspace; };
@@ -99,12 +111,12 @@ public:
     // Initialization
     void zeros();
     void setTo(T val);
-    
+
     //  COLOR SPACE Conversion
     void toBGRSpace();
     void toRGBSpace();
     void toGRAYSpace();
-    void toLabSpace();
+    void toLabSpace(bool divbool = true);
     void toHsvSpace();
 
     // Operator //
@@ -221,12 +233,13 @@ public:
     T *at(int row, int col);
     const T *at(int row, int col) const;
 
+    // Return a vec object composed by the elements sharing the locatioon, row-col pass on the image
     Vec<T> atVec(int row, int col);
     const Vec<T> atVec(int row, int col) const;
 
     ~Mat()
     {
-        delete (data);
+        delete[] data;
     }
 };
 
@@ -262,19 +275,23 @@ Mat<T> operator*(const Mat<T> &Mata, const Mat<T> &Matb);
 
 // Constructors
 template <typename T>
-Mat<T>::Mat() : data(nullptr), rows(0), cols(0), channels(0), clrspace(PixlColorSpace::RGB){};
-template <typename T>
-Mat<T>::Mat(int _rows, int _cols, int _channels, PixlColorSpace _clrspace) : rows(_rows), cols(_cols), channels(_channels), clrspace(_clrspace)
+Mat<T>::Mat() : data(nullptr), rows(0), cols(0), channels(0), clrspace(PixlColorSpace::RGB)
 {
+    //std::cout << "Creared fro noth" << std::endl;
+};
+template <typename T>
+Mat<T>::Mat(int _rows, int _cols, int _channels, PixlColorSpace _clrspace) : rows(_rows), cols(_cols), channels(_channels), clrspace(_clrspace), data(nullptr)
+{
+    //std::cout << "Creared rows shit" << std::endl;
     data = new T[rows * cols * channels];
-    // Not useful this->zeros(); ?
 }
 
 template <typename T>
-
 Mat<T>::Mat(T *_data, int _rows, int _cols, int _channels) : rows(_rows),
                                                              cols(_cols), channels(_channels)
 {
+    //std::cout << "Creared from many shit" << std::endl;
+
     data = new T[rows * cols * channels];
     std::memcpy(data, _data, rows * cols * channels * sizeof(T));
     clrspace = (channels > 2) ? PixlColorSpace::RGB : PixlColorSpace::Gray;
@@ -289,22 +306,25 @@ Mat<T>::Mat(T *_data, int _rows, int _cols, int _channels) : rows(_rows),
 
 template <typename T>
 Mat<T>::Mat(const Mat<T> &otherMat)
-    : rows(otherMat.rows), cols(otherMat.cols), channels(otherMat.channels)
+    : rows(otherMat.rows), cols(otherMat.cols), channels(otherMat.channels),
+      clrspace(otherMat.clrspace)
 {
+    //std::cout << "Creared from copycons shit" << std::endl;
+
     data = new T[rows * cols * channels];
-    std::memcpy(data, otherMat.data, rows * cols * channels * sizeof(unsigned char));
+    std::memcpy(data, otherMat.data, rows * cols * channels * sizeof(T));
 }
 
 template <typename T>
 Mat<T>::Mat(Mat<T> &&otherMat) noexcept
-    : data(nullptr), rows(0), cols(0), channels(0)
+    : data(otherMat.data), rows(otherMat.rows),
+      cols(otherMat.cols), channels(otherMat.channels)
 {
+    //std::cout << "Creared from assign shit" << std::endl;
+
     if (this != &otherMat)
     {
-        rows = otherMat.rows;
-        cols = otherMat.cols;
-        channels = otherMat.channels;
-        data = otherMat.data;
+        clrspace = otherMat.clrspace;
         otherMat.data = nullptr;
         otherMat.rows = 0;
         otherMat.cols = 0;
@@ -317,7 +337,7 @@ void Mat<T>::zeros()
 {
     for (int i = 0; i < rows * cols * channels; ++i)
     {
-        // Default constructor of each value
+       // Default constructor of each value
         data[i] = T();
     }
 }
@@ -332,7 +352,6 @@ void Mat<T>::setTo(T val)
         data[i] = val;
     }
 }
-
 
 template <typename T>
 
@@ -385,7 +404,7 @@ void Mat<T>::splitMat(std::vector<T> *channel1,
 }
 
 template <typename T>
-void Mat<T>::splitMat(Mat<T>* channels) const
+void Mat<T>::splitMat(Mat<T> *channels) const
 {
     // Ensure the image has at elast 2 channels (GrayA)
     int nbchannels = this->getChannels();
@@ -398,10 +417,10 @@ void Mat<T>::splitMat(Mat<T>* channels) const
     std::vector<std::vector<T>> channel(4);
     splitMat(&channel[0], &channel[1], &channel[2], &channel[3]);
 
-    for (int i = 0; i < getChannels; i++)
+    for (int i = 0; i < this->getChannels(); i++)
     {
-        &(channels[i]) = new Mat(channel[i].data(), this->getRows(),
-                         this->getCols(), this->getChannels());
+        channels[i] = Mat<T>(channel[i].data(), this->getRows(),
+                             this->getCols(), 1);
     }
 
     return;
@@ -481,44 +500,51 @@ void Mat<T>::minMaxLocChan(int &min, int &max, int channel) const
 // Operator //
 template <typename T>
 T Mat<T>::sumComponents() const
-    {
-        T sum = 0;
-        for (int i = 0; i < rows * channels * cols; ++i)
-        {
-            sum += data[i];
-        }
-        return sum;
-    }
-
-// Assignment Op
-template <typename T>
-Mat<T> &Mat<T>::operator=(const Mat<T> &other)
 {
-
-    if (this != &other)
+    T sum = 0;
+    for (int i = 0; i < rows * channels * cols; ++i)
     {
-        rows = other.rows;
-        cols = other.cols;
-        channels = other.channels;
-        data = other.data;
+        sum += data[i];
+    }
+    return sum;
+}
+
+// Copy assignment Op
+template <typename T>
+Mat<T> &Mat<T>::operator=(const Mat<T> &othermat)
+{
+    if (this != &othermat)
+    {
+        delete[] data;
+
+        rows = othermat.rows;
+        cols = othermat.cols;
+        clrspace = othermat.clrspace;
+        channels = othermat.channels;
+
+        data = new T[rows * cols * channels];
+        std::memcpy(data, othermat.data, rows * cols * channels * sizeof(T));
     }
 
     return *this;
 }
 
+// Move assignment Op
 template <typename T>
-Mat<T> &Mat<T>::operator=(Mat<T> &&otherMat)
+Mat<T> &Mat<T>::operator=(Mat<T> &&othermat)
 {
-    delete (data);
-    if (this != &otherMat)
+    if (this != &othermat)
     {
-        rows = otherMat.rows;
-        cols = otherMat.cols;
-        channels = otherMat.channels;
-        data = std::move(otherMat.data);
-        otherMat.rows = 0;
-        otherMat.cols = 0;
-        otherMat.data = nullptr;
+        delete[] data;
+
+        rows = othermat.rows;
+        cols = othermat.cols;
+        channels = othermat.channels;
+        clrspace = othermat.clrspace;
+        data = othermat.data;
+        othermat.rows = 0;
+        othermat.cols = 0;
+        othermat.data = nullptr;
     }
     return *this;
 }
@@ -531,9 +557,9 @@ Mat<T> &Mat<T>::operator=(Mat<T> &&otherMat)
 template <typename T>
 Mat<T> &Mat<T>::operator*=(const Mat<T> &otherMat)
 {
-    if (this->channels != otherMat.channels || this->rows != otherMat.rows || this->cols != otherMat.cols)
+    if (this->channels != otherMat.channels || this->cols != otherMat.rows)
     {
-        throw std::invalid_argument("Matrices dimensions or channel count do not match for element-wise multiplication.");
+        throw std::invalid_argument("Matrices dimensions or channel do not match for  assign multiplication.");
     }
 
     // data[(row * cols + col) * channels + channel]
@@ -573,7 +599,7 @@ Mat<T> &Mat<T>::operator+=(const Mat<T> &otherMat)
 {
     if (this->channels != otherMat.channels || this->rows != otherMat.rows || this->cols != otherMat.cols)
     {
-        throw std::invalid_argument("Matrices dimensions or channel count do not match for element-wise multiplication.");
+        throw std::invalid_argument("Matrices dimensions or channel count do not match for assign element-wise addition.");
     }
 
     for (int c = 0; c < channels; ++c)
@@ -606,7 +632,7 @@ Mat<T> &Mat<T>::operator-=(const Mat<T> &otherMat)
 {
     if (this->channels != otherMat.channels || this->rows != otherMat.rows || this->cols != otherMat.cols)
     {
-        throw std::invalid_argument("Matrices dimensions or channel count do not match for element-wise multiplication.");
+        throw std::invalid_argument("Matrices dimensions or channel count do not match for element-wise substration.");
     }
 
     for (int c = 0; c < channels; ++c)
@@ -838,41 +864,6 @@ Mat<T> mergeInto(std::vector<std::vector<T>> &channels, bool equalchannel, int r
     return newmat;
 }
 
-/*
-template <typename T>
-Mat<T> mergeInto(std::vector<T> &channel1, std::vector<T> &channel2, std::vector<T> &channel3, std::vector<T> &channel4){
-{
-    //TODO, check how variadic could improve the readiblity
-    int rows = std::max(channel1.size(),channel2.size(), channel3.size(), channel4.size());
-    rows = rows/2;
-    int cols = rows;
-    //Check  empty channel
-    if(channel1.size() == 0)
-    int channels = (channel1.size() == 0 +
-                      channel2.size() == 0) +
-                     (channel3.size() == 0 +
-                      channel4.size() == 0);
-    if (channels < 2)
-    {
-        std::cerr << "Image does not have at least 2 channels!" << std::endl;
-        return;
-    }
-
-    if (channels >= 3)
-    {
-        channel3.resize(rows * cols);
-    }
-    if (channels == 4)
-    {
-        channel4.resize(rows * cols);
-    }
-    T *tempmerge = new T[rows * cols * channels];
-    return;
-}
-
-}
-*/
-
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 //                      TEMPLATE DEFINITION
@@ -886,13 +877,13 @@ inline Mat<T> operator*(const Mat<T> &Mata, const Mat<T> &Matb)
     int rows = Mata.rows;
     int cols = Mata.cols;
 
-    if (channels != Matb.channels || rows != Matb.rows || cols != Matb.cols)
+    if (channels != Matb.channels || cols != Matb.rows)
     {
-        throw std::invalid_argument("Matrices dimensions or channel count do not match for element-wise multiplication.");
+        throw std::invalid_argument("Matrices dimensions or channel count do not match for  multiplication.");
     }
 
     // data[(row * cols + col) * channels + channel]
-    Mat<T> multmat(Mata.rows, Mata.cols, Mata.channels);
+    Mat<T> multmat(Mata.rows, Matb.cols, Mata.channels);
 
     // Perform matrix multiplication
     for (int c = 0; c < channels; ++c)
@@ -917,7 +908,7 @@ inline Mat<T> operator*(const Mat<T> &Mata, const T &scalar)
     Mat<T> multmat(Mata.rows, Mata.cols, Mata.channels);
     for (int i = 0; i < Mata.cols * Mata.rows * Mata.channels; ++i)
     {
-        multmat[i] = Mata.data[i] * scalar;
+        multmat.data[i] = Mata.data[i] * scalar;
     }
     return multmat;
 }
@@ -932,7 +923,7 @@ Mat<T> operator+(const Mat<T> &Mata, const Mat<T> &Matb)
 
     if (channels != Matb.channels || Mata.rows != Matb.rows || Mata.cols != Matb.cols)
     {
-        throw std::invalid_argument("Matrices dimensions or channel count do not match for element-wise multiplication.");
+        throw std::invalid_argument("Matrices dimensions or channel count do not match for element-wise addition.");
     }
     Mat<T> addmat(Mata.rows, Mata.cols, Mata.channels);
 
@@ -972,7 +963,7 @@ Mat<T> operator-(const Mat<T> &Mata, const Mat<T> &Matb)
     int cols = Mata.cols;
     if (channels != Matb.channels || Mata.rows != Matb.rows || Mata.cols != Matb.cols)
     {
-        throw std::invalid_argument("Matrices dimensions or channel count do not match for element-wise multiplication.");
+        throw std::invalid_argument("Matrices dimensions or channel count do not match for element-wise substraction.");
     }
     Mat<T> submat(Mata.rows, Mata.cols, Mata.channels);
 
@@ -1022,9 +1013,10 @@ Mat<T> operator/(const Mat<T> &Mata, const T &scalar)
 // Gamma Correction value
 #define Gamma_C_V 0.04045
 #define Gamma_C_D 12.92
-
-// For RGB
-float gamma_correct(double c)
+// https://docs.opencv.org/3.4/de/d25/imgproc_color_conversions.html
+// https://www.easyrgb.com/en/math.php
+//  For RGB
+float gamma_correctLab(double c)
 {
     if (c <= Gamma_C_V)
     {
@@ -1037,7 +1029,7 @@ float gamma_correct(double c)
 }
 
 // For XYZ
-float functiontt(float c, float a = 7.787f, float b = 16 / 116.f)
+float functiontt(float c, float a = 7.787f, float b = (16.f / 116.f))
 {
     if (c <= 0.008856)
     {
@@ -1051,56 +1043,92 @@ float functiontt(float c, float a = 7.787f, float b = 16 / 116.f)
 
 // Might change it in the end
 //  Value maybe /100
-#define LAB_XN 95.0456
-#define LAB_YN 100.0
-#define LAB_ZN 108.8753
+// DL65 XYZ Reference
+#define LAB_XN 109.850f
+#define LAB_YN 100.0f
+#define LAB_ZN 35.585f
+
+/*XYZ references*/
+typedef struct
+{
+    float x, y, z;
+    const char *description;
+} XYZRefT;
+
+// TODO Look into
+typedef enum
+{
+    A2,
+    B2,
+    C2,
+    D50_2,
+    D55_2,
+    D65_2,
+    D75_2,
+    E_2,
+    F1_2
+} XYZRefHandle;
+
+static XYZRefT XYZrefs[] = {
+    {109.850f, 100.0f, 35.585f, "Incandescent/tungsten (2°)"},
+    {99.0927f, 100.0f, 85.313f, "Old direct sunlight at noon (2°)"},
+    {98.074f, 100.0f, 118.232f, "Old daylight (2°)"},
+    {96.422f, 100.0f, 82.521f, "ICC profile PCS (2°)"},
+    {95.682f, 100.0f, 92.149f, "Mid-morning daylight (2°)"},
+    {95.047f, 100.0f, 108.883f, "Daylight, sRGB, Adobe-RGB (2°)"},
+    {94.972f, 100.0f, 122.638f, "North sky daylight (2°)"},
+    {100.000f, 100.0f, 100.000f, "Equal energy (2°)"},
+    {92.834f, 100.0f, 103.665f, "Daylight Fluorescent (2°)"},
+};
 
 // TODO Test result
 // TODO control output Matrix
 template <typename T>
-void Mat<T>::toLabSpace()
+void Mat<T>::toLabSpace(bool divbool)
 {
     if (channels < 3)
     {
         return;
     }
+
+    int idref = XYZRefHandle::E_2;
+    float divide = divbool ? 100 : 1;
+    int delta;
     switch (clrspace)
     {
     case PixlColorSpace::BGR:
         break;
     case PixlColorSpace::RGB:
-        T valr;
-        T valb;
-        T valg;
+
         float X;
         float Y;
         float Z;
-        // https://docs.opencv.org/3.4/de/d25/imgproc_color_conversions.html
-        // https://stackoverflow.com/questions/14175538/storing-lab-colors-as-integers
         for (int j = 0; j < this->rows; ++j)
         {
             for (int i = 0; i < this->cols; ++i)
             {
                 // TODO TO specific function/MACro
                 // TO XYZ
-                valr = 100 * gamma_correct(data.atChannelOp(j, i, 0) / 255);
-                valg = 100 * gamma_correct(data.atChannelOp(j, i, 1) / 255);
-                valb = 100 * gamma_correct(data.atChannelOp(j, i, 2) / 255);
+
+                float valr = 100.f * gamma_correctLab(static_cast<float>(this->atChannelOp(j, i, 0)) / 255.0f);
+                float valg = 100.f * gamma_correctLab(static_cast<float>(this->atChannelOp(j, i, 1)) / 255.0f);
+                float valb = 100.f * gamma_correctLab(static_cast<float>(this->atChannelOp(j, i, 2)) / 255.0f);
                 X = 0.4124f * valr + 0.3575f * valg + 0.1804f * valb;
-                X = X / LAB_XN;
+                X = X / (XYZrefs[idref].x / divide);
                 Y = 0.2126f * valr + 0.7151f * valg + 0.0721f * valb;
-                Y = Y / LAB_YN;
-                Z = 0.0193f * valr + 0.1191f * valg + 0.9502f * valb;
-                Z = Z / LAB_ZN;
+                Y = Y / (XYZrefs[idref].y / divide);
+                Z = 0.0193f * valr + 0.1192f * valg + 0.9505f * valb;
+                Z = Z / (XYZrefs[idref].z / divide);
                 // TO XYZ
+
                 // refvalues
                 // float tevaluate= 0.008856.f ;
                 // float a=7.787f ;
                 // float b= 16/116.f;
                 // Difference betwween the two thing
-                data.atChannelOp(j, i, 0) = 116 * functiontt(Y) - 16; // X or Y + diffent formula
-                data.atChannelOp(j, i, 1) = 500 * (functiontt(X) - functiontt(Y));
-                data.atChannelOp(j, i, 2) = 200 * (functiontt(Y) - functiontt(Z));
+                this->atChannelOp(j, i, 0) = static_cast<T>(116 * (functiontt(Y)) - 16); // X or Y + diffent formula
+                this->atChannelOp(j, i, 1) = static_cast<T>(500 * (functiontt(X) - functiontt(Y)));
+                this->atChannelOp(j, i, 2) = static_cast<T>(200 * (functiontt(Y) - functiontt(Z)));
             }
         }
         break;
