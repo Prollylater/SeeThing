@@ -9,7 +9,7 @@
 // Integer based Vector class
 #include <iostream>
 
-template <typename T>
+template <typename T> 
 struct Vec
 {
   T x, y, z;

@@ -17,7 +17,7 @@
 // TODO Exceptio handling channels, bad arguments etc..
 #ifndef MAT_H
 #define MAT_H
-enum PixlColorSpace : unsigned short
+enum PixlColorSpace : int
 {
     BGR,
     RGB,
@@ -84,15 +84,14 @@ public:
     Mat(T *_data, int _rows, int _cols, int _channels);
     Mat(const Mat &otherMat);
 
-    // TODO
-    explicit Mat(Mat &&otherMat) noexcept;
+    Mat(Mat &&otherMat) noexcept;
 
     // Functions //
     int getRows() const { return rows; }
     const T *getData() const { return data; }
 
     int getCols() const { return cols; }
-
+    //TODO finish this
     /* int resizedims(int _rows =this->rows,int _cols = this->cols,
 
      //TODO This
@@ -136,6 +135,7 @@ public:
 
     Mat<T> transpose() const;
 
+    // TODO intensive operation to avoid redo
     template <typename T2>
     Mat<T2> convertDt() const
     {
@@ -229,6 +229,14 @@ public:
     // Accessors
     T &atChannel(int row, int col, int channel);
     const T &atChannel(int row, int col, int channel) const;
+
+    // TODO Define outside the at with inbuilt cast for atChannel
+    template <typename T2>
+    T2 atCast(int row, int col, int channel);
+    template <typename T2>
+
+    const T2 atCast(int row, int col, int channel) const;
+
     // TODO Convert it to std::array
     T *at(int row, int col);
     const T *at(int row, int col) const;
@@ -275,22 +283,22 @@ Mat<T> operator*(const Mat<T> &Mata, const Mat<T> &Matb);
 
 // Constructors
 template <typename T>
-Mat<T>::Mat() : data(nullptr), rows(0), cols(0), channels(0), clrspace(PixlColorSpace::RGB)
-{
-    //std::cout << "Creared fro noth" << std::endl;
-};
+Mat<T>::Mat() : data(nullptr), rows(0), cols(0), channels(0), clrspace(PixlColorSpace::RGB){
+                                                                  // std::cout << "Creared fro noth" << std::endl;
+                                                              };
 template <typename T>
 Mat<T>::Mat(int _rows, int _cols, int _channels, PixlColorSpace _clrspace) : rows(_rows), cols(_cols), channels(_channels), clrspace(_clrspace), data(nullptr)
 {
-    //std::cout << "Creared rows shit" << std::endl;
+    // std::cout << "Creared rows shit" << std::endl;
     data = new T[rows * cols * channels];
+    this->zeros();
 }
 
 template <typename T>
 Mat<T>::Mat(T *_data, int _rows, int _cols, int _channels) : rows(_rows),
                                                              cols(_cols), channels(_channels)
 {
-    //std::cout << "Creared from many shit" << std::endl;
+    // std::cout << "Creared from many shit" << std::endl;
 
     data = new T[rows * cols * channels];
     std::memcpy(data, _data, rows * cols * channels * sizeof(T));
@@ -309,7 +317,7 @@ Mat<T>::Mat(const Mat<T> &otherMat)
     : rows(otherMat.rows), cols(otherMat.cols), channels(otherMat.channels),
       clrspace(otherMat.clrspace)
 {
-    //std::cout << "Creared from copycons shit" << std::endl;
+    // std::cout << "Creared from copycons shit" << std::endl;
 
     data = new T[rows * cols * channels];
     std::memcpy(data, otherMat.data, rows * cols * channels * sizeof(T));
@@ -320,7 +328,7 @@ Mat<T>::Mat(Mat<T> &&otherMat) noexcept
     : data(otherMat.data), rows(otherMat.rows),
       cols(otherMat.cols), channels(otherMat.channels)
 {
-    //std::cout << "Creared from assign shit" << std::endl;
+    // std::cout << "Creared from assign shit" << std::endl;
 
     if (this != &otherMat)
     {
@@ -334,23 +342,31 @@ Mat<T>::Mat(Mat<T> &&otherMat) noexcept
 // Initialization
 template <typename T>
 void Mat<T>::zeros()
-{
-    for (int i = 0; i < rows * cols * channels; ++i)
+{   
+    //TOTRY Benchmark this
+    /*for (int i = 0; i < rows * cols * channels; ++i)
     {
-       // Default constructor of each value
+        // Default constructor of each value
         data[i] = T();
     }
+    */ 
+    std::fill(data, data + rows * cols * channels, T{});
+
 }
 
 // Initialization
 template <typename T>
 void Mat<T>::setTo(T val)
 {
+    //TOTRY Benchmark this
+    /*
     for (int i = 0; i < rows * cols * channels; ++i)
     {
         // Default constructor of each value
         data[i] = val;
-    }
+    }*/
+    std::fill(data, data + rows * cols * channels, val);
+
 }
 
 template <typename T>
@@ -392,7 +408,7 @@ void Mat<T>::splitMat(std::vector<T> *channel1,
         (*channel2)[i] = data[i * channels + 1];
         if (channels >= 3)
         {
-            (*channel3)[i] = data[i * channels + 3];
+            (*channel3)[i] = data[i * channels + 2];
         }
         if (channels == 4)
         {
@@ -415,6 +431,7 @@ void Mat<T>::splitMat(Mat<T> *channels) const
         return;
     }
     std::vector<std::vector<T>> channel(4);
+
     splitMat(&channel[0], &channel[1], &channel[2], &channel[3]);
 
     for (int i = 0; i < this->getChannels(); i++)
@@ -702,6 +719,25 @@ const T &Mat<T>::atChannel(int row, int col, int channel) const
     if (row < 0 || row >= rows || col < 0 || col >= cols || channel < 0 || channel >= channels)
         throw std::out_of_range("Index out of bounds");
     return data[(row * cols + col) * channels + channel];
+}
+
+// TODO Amelioration ?
+
+template <typename T>
+template <typename T2>
+T2 Mat<T>::atCast(int row, int col, int channel)
+{
+    if (row < 0 || row >= rows || col < 0 || col >= cols || channel < 0 || channel >= channels)
+        throw std::out_of_range("Index out of bounds");
+    return static_cast<T2>(data[(row * cols + col) * channels + channel]);
+}
+template <typename T>
+template <typename T2>
+const T2 Mat<T>::atCast(int row, int col, int channel) const
+{
+    if (row < 0 || row >= rows || col < 0 || col >= cols || channel < 0 || channel >= channels)
+        throw std::out_of_range("Index out of bounds");
+    return static_cast<T2>(data[(row * cols + col) * channels + channel]);
 }
 
 // TODO Convert it to std::array
@@ -1091,15 +1127,14 @@ void Mat<T>::toLabSpace(bool divbool)
         return;
     }
 
-    int idref = XYZRefHandle::E_2;
-    float divide = divbool ? 100 : 1;
+    int idref = XYZRefHandle::D50_2;
+    float divide = divbool ? 10 : 1;
     int delta;
     switch (clrspace)
     {
     case PixlColorSpace::BGR:
         break;
     case PixlColorSpace::RGB:
-
         float X;
         float Y;
         float Z;
@@ -1140,9 +1175,10 @@ void Mat<T>::toLabSpace(bool divbool)
         break;
     default:
         std::cout << "Unknown color." << std::endl;
-        break;
+        return;
     }
-    clrspace = PixlColorSpace::Lab;
+
+    this->clrspace = PixlColorSpace::Lab;
 }
 
 template <typename T>

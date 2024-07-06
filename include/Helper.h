@@ -7,7 +7,7 @@
 template <typename T>  
 Mat<T> createMat3x3( float a1,float a2,float a3,float b1,float b2,float b3,float c1, float c2, float c3);
 
-template <typename T>  
+template <typename T>   
 Mat<int> calcHistogram(const Mat<T>& img,  int bins = 256);
 
 //void outputhist(const Mat<int>& canvas, const Mat<int>& hist, int histSize, int hist_h,int hist_w ,Vec<int> color);
