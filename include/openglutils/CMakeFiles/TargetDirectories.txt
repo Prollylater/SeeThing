@@ -1,3 +1,0 @@
-/home/rubuntu/Documents/MIfImage/Projetimg/ImgEditortemp/include/openglutils/CMakeFiles/test.dir
-/home/rubuntu/Documents/MIfImage/Projetimg/ImgEditortemp/include/openglutils/CMakeFiles/edit_cache.dir
-/home/rubuntu/Documents/MIfImage/Projetimg/ImgEditortemp/include/openglutils/CMakeFiles/rebuild_cache.dir
