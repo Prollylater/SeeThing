@@ -11,33 +11,6 @@
 void ShowColorPicker(bool &show, ImVec4 &color);
 
 void SetupImGuiFonts();
-/*
-enum class WinStates
-{
-    img_rendr_area,
-    rg_grow_panel,
-};
-//Class just to have a cosntructor at hand
-struct WinStatesHandler{
-    std::unordered_map<WinStates,bool> m_states;
 
-
-    void reverseState(WinStates& state){
-        m_states.at(state) =  !m_states.at(state) ;
-        resolveDependencies(state);
-
-    }
-
-
-
-
-
-};
-*/
-
-
-struct RgState{
-    
-};
 
 #endif
