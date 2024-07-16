@@ -1133,8 +1133,8 @@ void SlicAlgorithm(/*const char* datapath*/Mat<T> image, const SlicParameter &pa
 // test
 void testSlic()
 {
-    SlicParameter() param;
-    SlicAlgorithm<unsigned char>("0.jpg", param);
+    //SlicParameter param;
+   // SlicAlgorithm<unsigned char>("0.jpg", param);
     // pipeline(data);
 }
 

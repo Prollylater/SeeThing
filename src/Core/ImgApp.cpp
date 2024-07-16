@@ -4,7 +4,7 @@ ImgApp::ImgApp(): main_window()
 {
 
   
-  if (!Glcontx.initGlContext(main_window, 1024, 576))
+  if (!OpenGlContext::initGlContext(main_window, 1024, 576))
   {
     std::cerr << "OpenGLContext initialization failed" << std::endl;
   }
@@ -18,6 +18,7 @@ bool eval = ImGuiAppContext::init(main_window);
       std::cerr << "ImGuiAppContext initialization failed" << std::endl;
   }
 
+//TODO CREATE ENGINE AND DO STUF
 
 }
 
@@ -27,13 +28,13 @@ void ImgApp::start()
   {
     // Render
     
-    Glcontx.preRender();
+    OpenGlContext::preRender();
 
     ImGuiAppContext::preRender();
 
     ImGuiAppContext::Render();
 
-    Glcontx.postRender(main_window);
+    OpenGlContext::postRender(main_window);
 
     ImGuiAppContext::postRender();
   }
@@ -44,5 +45,5 @@ void ImgApp::quit()
   // Liberate necessary ressource
   ImGuiAppContext::quit();
 
-  Glcontx.quit(main_window);
+  OpenGlContext::quit(main_window);
 }

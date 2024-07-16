@@ -60,7 +60,7 @@ Mat<T> createMat3x3(float a1, float a2, float a3, float b1, float b2, float b3, 
 
 // Ok
 template <typename T>
-Mat<MT_INT> calcHistogram(const Mat<T> &img, int bins)
+Mat<int> calcHistogram(const Mat<T> &img, int bins)
 {
     // 256 by default
     Mat<int> hist(bins, 1, 1);

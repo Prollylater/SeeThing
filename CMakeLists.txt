@@ -21,6 +21,8 @@ set(PROJECT_SRC
     #Core
     ${SOURCE_DIR}/main.cpp
     
+    ${SOURCE_DIR}/ImgEditorEngine/ImgEditorEngine.cpp
+    
     ${SOURCE_DIR}/Core/ImgApp.cpp
     #Openglutils
     ${SOURCE_DIR}/Openglutils/Buffers.cpp
