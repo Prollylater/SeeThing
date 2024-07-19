@@ -54,7 +54,7 @@ public:
     OpenGLEngine &operator=(const OpenGLEngine &) = delete;
 
     bool initImrender();
-    bool ouputImg(const char *datapath, GLuint *out_texture, int *out_width, int *out_height);
+    bool outputImg(const char *datapath, GLuint *out_texture, int *out_width, int *out_height);
 
     void renderTexture();
     void renderColchange(const Vec<GLfloat> &new_coord, const GLuint &textsize, const Vec<GLfloat> &color);

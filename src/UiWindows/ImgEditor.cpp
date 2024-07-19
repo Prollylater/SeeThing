@@ -31,7 +31,7 @@ void ShowImageRenderingArea()
     ImGui::SetNextWindowSize(ImVec2(900, 500), ImGuiCond_FirstUseEver);
     ImGuiWindowFlags window_flags = /*ImGuiWindowFlags_NoTitleBar |*/ ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse;
     // Set the size of the window the first time it appears
-    GLuint display;
+    static GLuint display;
     int im_width, im_height;
 
     ImGui::Begin("Edit Mode", nullptr, window_flags);
@@ -71,10 +71,9 @@ void ShowImageRenderingArea()
         fileDialog.Display();
         if (fileDialog.HasSelected())
         {
-            std::string curr_img= fileDialog.GetSelected().string();
-            display_states.setState(MainWinSt::displayed_im, appobj::glengine.ouputImg(curr_img.c_str(), &display, &im_width, &im_height));
+            std::string curr_img = fileDialog.GetSelected().string();
+            display_states.setState(MainWinSt::displayed_im, appobj::glengine.outputImg(curr_img.c_str(), &display, &im_width, &im_height));
             IM_ASSERT(display_states.isTrue(MainWinSt::displayed_im));
-        
             fileDialog.ClearSelected();
         }
 
@@ -166,6 +165,26 @@ void ShowImageRenderingArea()
         if (display_states.isTrue(MainWinSt::displayed_im))
         {
             ImGui::Image((void *)(intptr_t)display, ImVec2(im_width, im_height));
+            GLint width, height;
+            glGetTexLevelParameteriv(GL_TEXTURE_2D, display, GL_TEXTURE_WIDTH, &width);
+            glGetTexLevelParameteriv(GL_TEXTURE_2D, display, GL_TEXTURE_HEIGHT, &height);
+
+            if (width > 0 && height > 0)
+            {
+                std::cout << "Texture is valid with width: " << width << " and height: " << height << std::endl;
+            }
+            else
+            {
+                std::cout << "Texture is not valid or not properly set." << std::endl;
+            }
+            if (glIsTexture(display))
+            {
+                std::cout << "Texture ID is valid." << std::endl;
+            }
+            else
+            {
+                std::cout << "Texture ID is not valid." << std::endl;
+            }
         }
         if (ImGui::IsWindowHovered())
         {

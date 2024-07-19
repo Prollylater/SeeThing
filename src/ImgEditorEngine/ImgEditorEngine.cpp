@@ -48,26 +48,52 @@ bool OpenGLEngine::initImrender()
                                      2, 3, 0};
 
     loadedvao[activevao] = createBuffers(canvas, indices, canvastext);
+    // TODO Array of shader for each change
+    // Init program with the generic loading shader
+    prog.init("./ressources/shaders/imgoutput.vs", "./ressources/shaders/imgoutput.fs");
 
     return true;
 }
-
-// Actual opengl rendering in viewport with new Texture , maybe useless
+/*
 void OpenGLEngine::renderTexture()
 {
-    glClear(GL_COLOR_BUFFER_BIT);
-    prog.use();
 
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    prog.use();
     bindTexture(imageress[activetexture], prog.shader_id, "image_color");
     glBindVertexArray(loadedvao[activevao].m_vao_id);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glDrawElements(GL_TRIANGLES, loadedvao[activevao].m_count, GL_UNSIGNED_INT, 0);
-     GLenum error = glGetError();
+    GLenum error = glGetError();
 
-        if (error != GL_NO_ERROR)
-        {
-            std::cerr << "Error durings engline render texture function: " << error << std::endl;
-        }
+    if (error != GL_NO_ERROR)
+    {
+        std::cerr << "Error durings engline render texture function: " << error << std::endl;
+    }
+    // Take care of each Ui components
+}
+*/
+// Actual opengl rendering in viewport with new Texture , maybe useless
+// From fbo
+void OpenGLEngine::renderTexture()
+{
+
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    prog.use();
+    bindTexture(imageress[activetexture], prog.shader_id, "image_color");
+    glBindVertexArray(loadedvao[activevao].m_vao_id);
+    glDrawElements(GL_TRIANGLES, loadedvao[activevao].m_count, GL_UNSIGNED_INT, 0);
+    GLenum error = glGetError();
+
+    glBindVertexArray(0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    if (error != GL_NO_ERROR)
+    {
+        std::cerr << "Error durings engline render texture function: " << error << std::endl;
+    }
     // Take care of each Ui components
 }
 
@@ -76,26 +102,19 @@ void OpenGLEngine::renderTexture()
 // Handling current vector states
 // Lot of thing to modify
 // Load an image
-bool OpenGLEngine::ouputImg(const char *datapath, GLuint *out_texture, int *out_width, int *out_height)
+bool OpenGLEngine::outputImg(const char *datapath, GLuint *out_texture, int *out_width, int *out_height)
 {
-    std::cout << "Entering function output" << std::endl;
     // Will always add at the specified Layer
     // Load image in main canvas, actually, should be Load to main canvas somewhere else -> Dispatch to some disparche engine
     //->Dispatch to some other thing Thus Canvas don't need any
     // TODO Canvas set up Should not be handled here
 
-
     // Simplify the call on the two line under
     Mat<uint8_t> tmpmat;
     // Charge image in texture and in the mat object
-    std::cout << datapath << std::endl;
-    std::cout << datapath << std::endl;
-    std::cout << datapath << std::endl;
-
 
     initTextRess(imageress[activetexture], read_texture<textuc>(0, datapath,
                                                                 tmpmat));
-    std::cout << "Texture from image function output at " << std::endl;
 
     Layer new_img(tmpmat);
     if (appobj::canvas.getLayerNb() > activevao)
@@ -107,28 +126,30 @@ bool OpenGLEngine::ouputImg(const char *datapath, GLuint *out_texture, int *out_
         appobj::canvas.addLayer(new_img);
     }
 
-    std::cout << "Canvas etup " << std::endl;
-    
     // TODO Canvas set up Should not be handled here
     prog.reset();
+
     prog.init("./ressources/shaders/imgoutput.vs", "./ressources/shaders/imgoutput.fs");
     // TODO, only init for the first texture in the vector
     // Implement mangament for multiple layers
-    std::cout << "Init Program" << std::endl;
 
     if (fbo == 0)
-    {
+    { // Create a fbo for other renderings
         fbo = createFBO(imageress[activetexture]);
     }
-    std::cout << "FBO created" << std::endl;
 
     // TODO, not sure of those assignment
     *out_width = tmpmat.getCols();
     *out_height = tmpmat.getRows();
+
+    // FBO texture is shared with this one,
     *out_texture = imageress[activetexture].texture_id;
+         std::cout<<"Image in outout " << imageress[activetexture].texture_id <<std::endl;
+         std::cout<<"Image in out " << out_texture<<std::endl;
+         std::cout<<"Image in out " << *out_texture<<std::endl;
+
 
     renderTexture();
-
     return 1;
 }
 // Rendering directly to FBO with colour change
