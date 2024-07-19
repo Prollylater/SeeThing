@@ -42,15 +42,15 @@ void Program::init(const char *vertex_path, const char *fragment_path)
     glDeleteShader(vertex);
     glDeleteShader(fragment);
 
-        GLenum error = glGetError();
+    GLenum error = glGetError();
 
-        if (error != GL_NO_ERROR)
-        {
-            std::cerr << "Error duringsShader initialization: " << error << std::endl;
-        }
+    if (error != GL_NO_ERROR)
+    {
+        std::cerr << "Error duringsShader initialization: " << error << std::endl;
+    }
 }
 
-//TODO load should have speicifc or jsut delete it
+// TODO load should have speicifc or jsut delete it
 void Program::load(const char *vertex_path, const char *fragment_path)
 {
     std::string v_shader_code = read(vertex_path);
@@ -90,21 +90,78 @@ void Program::reset()
 {
     this->detachAllShaders(shader_id);
     glUseProgram(shader_id);
-     GLenum error = glGetError();
+    GLenum error = glGetError();
 
-        if (error != GL_NO_ERROR)
-        {
-            std::cerr << "Error durings shaders dettach: " << error << std::endl;
-        }
+    if (error != GL_NO_ERROR)
+    {
+        std::cerr << "Error durings shaders dettach: " << error << std::endl;
+    }
 }
 
 void Program::detachAllShaders(GLuint program)
 {
+    // Check if the program ID is valid
+
+    // Get the number of attached shaders
+
+    // Allocate memory for shader IDs
+    GLuint *shadersarr = new (std::nothrow) GLuint[count];
+    if (shadersarr == nullptr)
+    {
+        std::cerr << "Error: Failed to allocate memory for shader array." << std::endl;
+        return;
+    }
+
+    // Retrieve attached shaders
+    glGetAttachedShaders(program, count, NULL, shadersarr);
+    error = glGetError();
+    if (error != GL_NO_ERROR)
+    {
+        std::cerr << "OpenGL error after glGetAttachedShaders: " << error << std::endl;
+        delete[] shadersarr;
+        return;
+    }
+
+    // Detach each shader
+    for (GLint i = 0; i < count; ++i)
+    {
+        glDetachShader(program, shadersarr[i]);
+        error = glGetError();
+        if (error != GL_NO_ERROR)
+        {
+            std::cerr << "OpenGL error while detaching shader: " << error << std::endl;
+        }
+    }
+
+    delete[] shadersarr;
+}
+
+void Program::detachAllShaders(GLuint program)
+{
+    if (glIsProgram(program) == GL_FALSE)
+    {
+        std::cerr << "Invalid program ID provided in detachAllShaders." << std::endl;
+        return;
+    }
+
     // Get the number of attached shaders
     GLint count = 0;
     glGetProgramiv(program, GL_ATTACHED_SHADERS, &count);
+
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR)
+    {
+        std::cerr << "OpenGL error after glGetProgramiv in detachAllShaders. Id: " << error << std::endl;
+        return;
+    }
+
     // Fill the
     GLuint *shadersarr = new GLuint[count];
+    if (shadersarr == nullptr)
+    {
+        std::cerr << "Failed to allocate memory for shader array in deatch AllShaders" << std::endl;
+        return;
+    }
     glGetAttachedShaders(program, count, NULL, shadersarr);
 
     // Detach each shader
@@ -113,6 +170,13 @@ void Program::detachAllShaders(GLuint program)
         glDetachShader(program, shadersarr[i]);
     }
 
+    error = glGetError();
+    if (error != GL_NO_ERROR)
+    {
+        std::cerr << "An OpenGL error occured before detachAllShaders last call. Id: " << error << std::endl;
+        delete[] shadersarr;
+        return;
+    }
     delete[] shadersarr;
 }
 
