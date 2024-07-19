@@ -41,20 +41,16 @@ void Program::init(const char *vertex_path, const char *fragment_path)
     }
     glDeleteShader(vertex);
     glDeleteShader(fragment);
+
+        GLenum error = glGetError();
+
+        if (error != GL_NO_ERROR)
+        {
+            std::cerr << "Error duringsShader initialization: " << error << std::endl;
+        }
 }
 
-// use/activate the shader
-void Program::use()
-{
-    if (shader_id == 0)
-    {
-        std::cerr << "Progam not found" << std::endl;
-    }
-    else
-    {
-        glUseProgram(shader_id);
-    }
-}
+//TODO load should have speicifc or jsut delete it
 void Program::load(const char *vertex_path, const char *fragment_path)
 {
     std::string v_shader_code = read(vertex_path);
@@ -76,10 +72,30 @@ void Program::load(const char *vertex_path, const char *fragment_path)
     glDeleteShader(vertex);
     glDeleteShader(fragment);
 }
+
+// use/activate the shader
+void Program::use()
+{
+    if (shader_id == 0)
+    {
+        std::cerr << "Progam not found" << std::endl;
+    }
+    else
+    {
+        glUseProgram(shader_id);
+    }
+}
+
 void Program::reset()
 {
     this->detachAllShaders(shader_id);
     glUseProgram(shader_id);
+     GLenum error = glGetError();
+
+        if (error != GL_NO_ERROR)
+        {
+            std::cerr << "Error durings shaders dettach: " << error << std::endl;
+        }
 }
 
 void Program::detachAllShaders(GLuint program)

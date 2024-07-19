@@ -10,4 +10,4 @@ void ShowSlicParameter(bool &show);
 
 void ShowSeedParameter(bool &show);
 
-void ShowRegionGrowingArea(bool &show);
+void ShowRegionGrowingArea();

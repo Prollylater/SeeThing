@@ -19,8 +19,6 @@ void ShowColorPicker(bool &show, ImVec4 &color)
     ImGui::End();
 }
 
-
-
 void SetupImGuiFonts()
 {
     ImGuiIO &io = ImGui::GetIO();
@@ -42,3 +40,11 @@ void SetupImGuiFonts()
     io.Fonts->Build();
 }
 
+/*
+void SetupGlEngine()
+{
+    if (!appobj::glengine.initImrender())
+    {
+        std::cerr << "Buffers Initialization failed" << std::endl;
+    }
+}*/

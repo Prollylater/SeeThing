@@ -67,9 +67,8 @@ void Render()
 {
     // Take care of each Ui components
     ShowExampleAppDockSpace();
-    
-    ShowImageRenderingArea(showrenderingarea, showreggrow);
-    ShowRegionGrowingArea(showreggrow);
+    ShowImageRenderingArea();
+    ShowRegionGrowingArea();
 }
 
 void postRender()

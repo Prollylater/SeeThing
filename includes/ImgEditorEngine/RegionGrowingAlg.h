@@ -1,18 +1,12 @@
-#pragma once
+#ifndef RG_GRW_H
+#define RG_GRW_H
 #include "Regions.h"
 #include "Imloader.h"
 #include "StructParam.h"
 
 // TODO, Check which template are really useful
 
-int moduloc(int dividend, int divisor)
-{
-    while (dividend >= divisor)
-    {
-        dividend -= divisor;
-    }
-    return dividend;
-}
+int moduloc(int dividend, int divisor);
 
 // TODO revoir
 //  Pose de germes
@@ -454,115 +448,15 @@ void adaptiveRegionGrowing(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>
 // TODO fully template or keep as unsigned char
 // Visited here currently does not represent anything but the original image
 //  Create from the src image
-Mat<uint8_t> composeSegMean(const Mat<uint8_t> &src, std::vector<Region> &regions)
-{
-    Mat<uint8_t> resultMat(src.getRows(), src.getCols(), src.getChannels(),
-                           src.getClrspace());
-
-    for (Region &region : regions)
-    {
-        if (region.getSizePix() > 0)
-        {
-            for (std::shared_ptr<Pixl> &pixelptr : region.pixels)
-            {
-                resultMat.atChannel(pixelptr->y, pixelptr->x, 0) = static_cast<uint8_t>(region.getMeanIntensity());
-            }
-        }
-    }
-    return resultMat;
-}
-
+Mat<uint8_t> composeSegMean(const Mat<uint8_t> &src, std::vector<Region> &regions);
 // Create from the visited a representation of the segmentation in RGB
 
-Mat<uint8_t> composeSegMeanColor(const Mat<uint8_t> &src, std::vector<Region> &regions)
-{
-    Mat<uint8_t> resultMat(src.getRows(), src.getCols(), 3);
-    for (Region &region : regions)
-    {
-        if (region.getSizePix() > 0)
-        {
-            Vec<uint8_t> regmeanclr = (region.computeColorIntensity(src)).convertDt<uint8_t>();
-
-            for (std::shared_ptr<Pixl> &pixelptr : region.pixels)
-            {
-                resultMat.at(pixelptr->y, pixelptr->x)[0] = regmeanclr.x;
-                resultMat.at(pixelptr->y, pixelptr->x)[1] = regmeanclr.y;
-                resultMat.at(pixelptr->y, pixelptr->x)[2] = regmeanclr.z;
-            }
-        }
-    }
-    return resultMat;
-}
+Mat<uint8_t> composeSegMeanColor(const Mat<uint8_t> &src, std::vector<Region> &regions);
 
 // TODO 05/07/2024 Post GUI
 // Unknog bud in SLic when this is outputted twice
-Mat<unsigned char> composeSegRandCol(const Mat<uint8_t> &src, const std::vector<Region> &regions)
-{
-    Mat<unsigned char> resultMat(src.getRows(), src.getCols(), 3, PixlColorSpace::RGB);
-
-    // Hypothesis: The same memory is reassigned for resultMat when function is called again in the same scope + some weird behavior i haven't determined
-    // Better Fix: Simply zeros each new Matrix
-    // Need more Test
-    // Temporaru patch for undetermined bug
-    // resultMat.zeros();
-
-    // Seed the random number generator
-    std::random_device rd;
-    std::mt19937 gen(rd());
-
-    std::vector<uint8_t> colorR;
-    std::vector<uint8_t> colorB;
-    std::vector<uint8_t> colorG;
-
-    // Step between regions colour
-    for (int i = 1; i < 255; ++i)
-    {
-        colorB.push_back(i);
-        colorR.push_back(i);
-        colorG.push_back(i);
-    }
-    // using built-in random generator:
-    std::shuffle(colorB.begin(), colorB.end(), gen);
-    std::shuffle(colorG.begin(), colorG.end(), gen);
-    std::shuffle(colorR.begin(), colorR.end(), gen);
-    int a = src.getRows();
-    int b = src.getCols();
-    int c = src.getRows();
-
-    writeImgPng("./UEB", resultMat, true);
-
-    for (const Region &region : regions)
-    {
-
-        if (region.getSizePix() > 0)
-        {
-            int id = (region.pixels[0]->getId()) % 255;
-            for (const std::shared_ptr<Pixl> &pixelptr : region.pixels)
-            {
-                resultMat.at(pixelptr->y, pixelptr->x)[0] = colorR[id];
-                resultMat.at(pixelptr->y, pixelptr->x)[1] = colorG[id];
-                resultMat.at(pixelptr->y, pixelptr->x)[2] = colorB[id];
-            }
-        }
-    }
-
-    writeImgPng("./UEB22", resultMat, true);
-
-    return resultMat;
-}
-
-Mat<uint8_t> composeDisplayEdge(Mat<uint8_t> &visited, std::vector<Region> &regions)
-{
-    // Idée, deux parcours complet de l'image.... ou stocker les informations sur la couleurs dans région aussi
-    Mat<uint8_t> intermediaryMat = composeSegMean(visited, regions);
-
-    Mat<uint8_t> kernel = createMat3x3<uint8_t>(3.0f, -1.0f, 0.0f,
-                                                1.0f, -2.0f, 0.0f,
-                                                2.0f, -1.0f, 0.0f);
-    Mat<uint8_t> resultMat = applyFilterConv3<uint8_t>(intermediaryMat, kernel);
-
-    return resultMat;
-}
+Mat<unsigned char> composeSegRandCol(const Mat<uint8_t> &src, const std::vector<Region> &regions);
+Mat<uint8_t> composeDisplayEdge(Mat<uint8_t> &visited, std::vector<Region> &regions);
 
 /*
 int testregiongrowing(int argc, char **argv)
@@ -1130,12 +1024,7 @@ void SlicAlgorithm(/*const char* datapath*/Mat<T> image, const SlicParameter &pa
     composeSegRandCol(image, regions);
 }
 
-// test
-void testSlic()
-{
-    //SlicParameter param;
-   // SlicAlgorithm<unsigned char>("0.jpg", param);
-    // pipeline(data);
-}
+void testSlic();
 
-// Regionns wide modiication
+
+#endif

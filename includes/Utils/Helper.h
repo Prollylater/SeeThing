@@ -1,3 +1,5 @@
+#ifndef HELPER_H
+#define HELPER_H
 
 #include <iostream>
 #include "Mat.h"
@@ -74,17 +76,9 @@ Mat<int> calcHistogram(const Mat<T> &img, int bins)
     return hist;
 }
 
+
+
 /*
-Opencv based picture outputing
-void outputhist(const cv::Mat& canvas, const cv::Mat& hist, int histSize, int hist_h,int hist_w , cv::Scalar color){
-    int bin_w = cvRound((double) hist_w / histSize);
-    for (int i = 1; i < histSize; i++) {
-        line(canvas, cv::Point(bin_w * (i - 1),
-        hist_h - cvRound(hist.at <float > (i - 1))),
-        cv::Point(bin_w * (i), hist_h - cvRound(hist.at < float > (i))),
-        color, 2, 8, 0);
-    }
-}*/
 
 Mat<int> normalizeHist(Mat<int> &tonormalize, int minrange, int maxrange)
 {
@@ -148,6 +142,7 @@ int findPeak(const Mat<int> &hist)
     return peakindex;
 }
 
+*/
 template <typename T>
 // TODO
 // Image might always be unsiched char, or at worst float
@@ -283,3 +278,6 @@ Mat<T> applyFilterConv3C3(const cv::Mat &src, const cv::Mat &filter)
     return newimg;
 }
 */
+
+
+#endif

@@ -17,9 +17,6 @@
 namespace ImGuiAppContext
 {
 
-    extern bool showreggrow;
-    extern bool showrenderingarea;
-   
     void initGlobalStyle();
 
     // Initialize the Vao allowing to render the image as a texture

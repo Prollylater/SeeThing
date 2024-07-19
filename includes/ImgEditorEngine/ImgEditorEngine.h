@@ -1,4 +1,3 @@
-
 #ifndef EDITOR_H
 #define EDITOR_H
 #include "StructParam.h"
@@ -12,9 +11,19 @@
 #include "Program.h"
 #include "Texture.h"
 
+#include "Canvas.h"
+
+// TODO This might be in need of a lot of refactoring
 
 class ImgEditorEngine;
 class OpenGLEngine;
+
+namespace appobj
+{
+  extern OpenGLEngine glengine;
+  extern Canvas canvas;
+
+}
 
 class OpenGLEngine
 {
@@ -25,7 +34,7 @@ class OpenGLEngine
 private:
     // Store Loaded vao
     std::vector<BufferIDsGroups> loadedvao;
-     int activevao;
+    int activevao;
     // Store Loaded texture
     std::vector<TextureResource> imageress;
     int activetexture;
@@ -35,13 +44,20 @@ private:
     // Store main Shader
     Program prog;
 
-//TODO Change active vao or texture
+    // TODO Change active vao or texture
 public:
     OpenGLEngine();
+
+    // TODO remove remnant of singleton patter here
+
+    OpenGLEngine(const OpenGLEngine &) = delete;
+    OpenGLEngine &operator=(const OpenGLEngine &) = delete;
+
     bool initImrender();
+    bool ouputImg(const char *datapath, GLuint *out_texture, int *out_width, int *out_height);
+
     void renderTexture();
     void renderColchange(const Vec<GLfloat> &new_coord, const GLuint &textsize, const Vec<GLfloat> &color);
-    void draw();
 };
 
 class ImgEditorEngine

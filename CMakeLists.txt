@@ -20,10 +20,13 @@ set(INCLUDE_DIR includes)
 set(PROJECT_SRC
     #Core
     ${SOURCE_DIR}/main.cpp
-    
-    ${SOURCE_DIR}/ImgEditorEngine/ImgEditorEngine.cpp
-    
     ${SOURCE_DIR}/Core/ImgApp.cpp
+    #Models
+    ${SOURCE_DIR}/Models/Canvas.cpp
+    #ImgEditorEngine
+    ${SOURCE_DIR}/ImgEditorEngine/ImgEditorEngine.cpp
+    ${SOURCE_DIR}/ImgEditorEngine/RegionGrowingAlg.cpp
+    ${SOURCE_DIR}/ImgEditorEngine/Regions.cpp
     #Openglutils
     ${SOURCE_DIR}/Openglutils/Buffers.cpp
     ${SOURCE_DIR}/Openglutils/Program.cpp
@@ -36,9 +39,11 @@ set(PROJECT_SRC
     ${SOURCE_DIR}/UiWindows/ImgEditor.cpp
     ${SOURCE_DIR}/UiWindows/RGPanel.cpp
     ${SOURCE_DIR}/UiWindows/UiCompUtils.cpp
-    
+    ${SOURCE_DIR}/UiWindows/GlobalStates.cpp
+    #Utils
     ${SOURCE_DIR}/Utils/Imloader.cpp
     ${SOURCE_DIR}/Utils/Mat.cpp
+    ${SOURCE_DIR}/Utils/Helper.cpp
    
    #Imgui
     ${INCLUDE_DIR}/Imgui/imgui.cpp
@@ -58,6 +63,9 @@ set(INCLUDES_DIRS
    
     ${INCLUDE_DIR}
     ${INCLUDE_DIR}/3rdParty
+    
+    #Models
+     ${INCLUDE_DIR}/Models
     
     ${INCLUDE_DIR}/ImgEditorEngine
     #Core

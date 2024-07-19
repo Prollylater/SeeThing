@@ -7,10 +7,21 @@
 #include "imgui_impl_opengl3.h"
 #include "IconsCodicons.h" //Simpler here
 #include <unordered_map>
+#include "StructParam.h"
+
+//Simpler here
+#include "GlobalStates.h"
+#include "ImgEditorEngine.h" //TODO Another place ?
+
 
 void ShowColorPicker(bool &show, ImVec4 &color);
 
 void SetupImGuiFonts();
+
+
+//TODO, Not the best position yet again
+void SetupGlEngine();
+
 
 
 #endif

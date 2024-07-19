@@ -1,5 +1,4 @@
 #include "RGPanel.h"
-#include "StructParam.h"
 
 
 void ShowSlicParameter(bool &show)
@@ -43,8 +42,6 @@ void ShowSlicParameter(bool &show)
         ImGui::EndCombo();
     }
 }
-
-
 
 void ShowSeedParameter(bool &show)
 {
@@ -111,8 +108,9 @@ void ShowSeedParameter(bool &show)
     };
 }
 
-void ShowRegionGrowingArea(bool &show)
+void ShowRegionGrowingArea()
 {
+   bool show = win_states.isTrue(WinStates::rg_panel);
 
     int count_button = 5;
     static int mode = 0;
@@ -142,6 +140,7 @@ void ShowRegionGrowingArea(bool &show)
         ImGui::Dummy(ImVec2((parent_size.x * 0.5f) - count_button * 20.0f, 1.0f));
         ImGui::SameLine();
         const char *icons[] = {ICON_CI_SEARCH, "Slic", "Seed", ICON_CI_SEARCH, ICON_CI_SEARCH};
+       // const char *desctiptions[] = {ICON_CI_SEARCH, "Slic", "Seed", ICON_CI_SEARCH, ICON_CI_SEARCH};
 
         for (int i = 0; i < count_button; ++i)
         {
