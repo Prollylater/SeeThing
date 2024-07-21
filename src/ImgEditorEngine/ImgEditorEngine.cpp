@@ -9,18 +9,18 @@ namespace appobj
 
 }
 
-OpenGLEngine::OpenGLEngine() : activevao(0), activetexture(0)
-{
-    loadedvao.resize(1);
-    imageress.resize(1);
-    // Create a buffers for the first and  only vao in currrent version
+OpenGLEngine::OpenGLEngine() //: activevao(0), activetexture(0)
+    {
+        // loadedvao.resize(1);
+        // imageress.resize(1);
+        //  Create a buffers for the first and  only vao in currrent version
 
-    /*// Context initialization
-    if (!initImrender())
-     {
-         std::cerr << "Buffers Initialization failed" << std::endl;
-     }*/
-};
+        /*// Context initialization
+        if (!initImrender())
+         {
+             std::cerr << "Buffers Initialization failed" << std::endl;
+         }*/
+    };
 
 bool OpenGLEngine::initImrender()
 {
@@ -47,7 +47,7 @@ bool OpenGLEngine::initImrender()
     std::vector<unsigned> indices = {0, 1, 2,
                                      2, 3, 0};
 
-    loadedvao[activevao] = createBuffers(canvas, indices, canvastext);
+    loadedvao = createBuffers(canvas, indices, canvastext);
     // TODO Array of shader for each change
     // Init program with the generic loading shader
     prog.init("./ressources/shaders/imgoutput.vs", "./ressources/shaders/imgoutput.fs");
@@ -76,23 +76,41 @@ void OpenGLEngine::renderTexture()
 */
 // Actual opengl rendering in viewport with new Texture , maybe useless
 // From fbo
-void OpenGLEngine::renderTexture()
+void OpenGLEngine::updatefboTexture(GLuint *out_texture, int *out_width, int *out_height)
 {
-
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
+    
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+static int a  = 0;
+
+    while(a!=1000 && a >0){
+        a;
+
+    }
+   a++;
+    prog.reset();
+    prog.init("./ressources/shaders/imgoutput.vs", "./ressources/shaders/imgoutput.fs");
+
     prog.use();
-    bindTexture(imageress[activetexture], prog.shader_id, "image_color");
-    glBindVertexArray(loadedvao[activevao].m_vao_id);
-    glDrawElements(GL_TRIANGLES, loadedvao[activevao].m_count, GL_UNSIGNED_INT, 0);
-    GLenum error = glGetError();
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glBindVertexArray(loadedvao.m_vao_id);
+
+  
+    bindTexture(imageress, prog.shader_id, "image_color");
+    std::cout<<"id" << imageress.unit << std::endl;
+    glDrawElements(GL_TRIANGLES, loadedvao.m_count, GL_UNSIGNED_INT, 0);
 
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, out_width);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, out_height);
+    std::cout<<out_width<<std::endl;
+    
+    
+    GLenum error = glGetError();
     if (error != GL_NO_ERROR)
     {
-        std::cerr << "Error durings engline render texture function: " << error << std::endl;
+        std::cerr << "Error durings engine update texture function: " << error << std::endl;
     }
     // Take care of each Ui components
 }
@@ -111,15 +129,14 @@ bool OpenGLEngine::outputImg(const char *datapath, GLuint *out_texture, int *out
 
     // Simplify the call on the two line under
     Mat<uint8_t> tmpmat;
-    // Charge image in texture and in the mat object
+    // Load image in texture and in the mat object
 
-    initTextRess(imageress[activetexture], read_texture<textuc>(0, datapath,
-                                                                tmpmat));
+    initTextRess(imageress, read_texture<textuc>(0, datapath, tmpmat));
 
     Layer new_img(tmpmat);
-    if (appobj::canvas.getLayerNb() > activevao)
+    if (appobj::canvas.getLayerNb() > 0)
     {
-        appobj::canvas.addAtLayer(new_img, activevao);
+        appobj::canvas.addAtLayer(new_img, 0);
     }
     else
     {
@@ -127,29 +144,28 @@ bool OpenGLEngine::outputImg(const char *datapath, GLuint *out_texture, int *out
     }
 
     // TODO Canvas set up Should not be handled here
-    prog.reset();
-
-    prog.init("./ressources/shaders/imgoutput.vs", "./ressources/shaders/imgoutput.fs");
     // TODO, only init for the first texture in the vector
     // Implement mangament for multiple layers
 
     if (fbo == 0)
     { // Create a fbo for other renderings
-        fbo = createFBO(imageress[activetexture]);
+        fbo = createFBO(imageress);
     }
+    // glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
     // TODO, not sure of those assignment
     *out_width = tmpmat.getCols();
     *out_height = tmpmat.getRows();
 
-    // FBO texture is shared with this one,
-    *out_texture = imageress[activetexture].texture_id;
-         std::cout<<"Image in outout " << imageress[activetexture].texture_id <<std::endl;
-         std::cout<<"Image in out " << out_texture<<std::endl;
-         std::cout<<"Image in out " << *out_texture<<std::endl;
+    // FBO texture
+    *out_texture = imageress.texture_id;
+    // NO rendering is necessary here
 
-
-    renderTexture();
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR)
+    {
+        std::cerr << "Error durings engine texture loading function: " << error << std::endl;
+    }
     return 1;
 }
 // Rendering directly to FBO with colour change
@@ -160,11 +176,11 @@ void OpenGLEngine::renderColchange(const Vec<GLfloat> &new_coord, const GLuint &
     prog.reset();
     prog.init("./ressources/shaders/colorchange.vs", "./ressources/shaders/colorchange.fs");
     prog.use();
-    bindTexture(imageress[activetexture], prog.shader_id, "image_color");
-    glBindVertexArray(loadedvao[activevao].getVao());
+    bindTexture(imageress, prog.shader_id, "image_color");
+    glBindVertexArray(loadedvao.getVao());
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
-    glDrawElements(GL_TRIANGLES, loadedvao[activevao].m_count, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, loadedvao.m_count, GL_UNSIGNED_INT, 0);
     prog.addUniform2("pixel_coord", new_coord);
     prog.addUniform3("new_color", color);
     prog.addUniform1("texture_size", textsize);
@@ -187,6 +203,77 @@ void OpenGLEngine::draw()
     bindTexture(imageress[activetexture], prog.shader_id, "image_color");
     glDrawElements(GL_TRIANGLES, loadedvao[activevao].m_count, GL_UNSIGNED_INT, 0);
 }
+
+
+*/
+
+// OLD TEst
+/*   GLint format;
+glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &format);
+
+switch (format) {
+     case GL_RGB:
+     case GL_RGB8:
+         std::cout << "Texture format is RGB." << std::endl;
+         break;
+     case GL_RGBA:
+     case GL_RGBA8:
+         std::cout << "Texture format is RGBA." << std::endl;
+         break;
+     case GL_RGB16F:
+         std::cout << "Texture format is RGB16F (16-bit floating point RGB)." << std::endl;
+         break;
+     case GL_RGBA16F:
+         std::cout << "Texture format is RGBA16F (16-bit floating point RGBA)." << std::endl;
+         break;
+     case GL_RGB32F:
+         std::cout << "Texture format is RGB32F (32-bit floating point RGB)." << std::endl;
+         break;
+     case GL_RGBA32F:
+         std::cout << "Texture format is RGBA32F (32-bit floating point RGBA)." << std::endl;
+         break;
+     // Add more formats as needed
+     default:
+         std::cout << "Unknown or unsupported texture format." << std::endl;
+         break;
+ }*/
+
+/*
+// Assuming 3 bytes per pixel for GL_RGB
+int size = width * height * 3;
+std::cout << width << "Image in out " << height << std::endl;
+uint8_t* pixels = new uint8_t[size];
+
+glGetTexImage(GL_TEXTURE_2D,0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+uint8_t* pixelsv = new uint8_t[size];
+std::memcpy(pixelsv,pixels, size);
+
+
+std::cout << width << "Image iddn out " << height << std::endl;
+
+Mat<uint8_t>outtexsez(pixels, height, width, 3);
+writeImgJpg("./trucssd.jpg",outtexsez ,true);
+
+if (width > 0 && height > 0)
+{
+    std::cout << "Texture is valid with width: " << width << " and height: " << height << std::endl;
+}
+else
+{
+    std::cout << "Texture is not valid or not properly set with width: " << width << " and height: " << height << std::endl;
+}
+if (glIsTexture(imageress.texture_id))
+{
+    std::cout << "Texture ID is valid." << std::endl;
+}
+else
+{
+    std::cout << "Texture ID is not valid." << std::endl;
+}
+  GLint width, height;
+glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+
 
 
 */

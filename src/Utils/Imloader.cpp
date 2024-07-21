@@ -10,16 +10,15 @@
 #include "Imloader.h"
 
 //Charge une image .png, .bmp, jpeg
-Mat<uint8_t> loadImg(const char* imagePath, bool flip) {
+Mat<uint8_t> loadImg(const char* imagePath, bool flip , int nbchan ) {
     // Load image using STB Image
     int width, height, channels;
     stbi_set_flip_vertically_on_load(flip);
-    uint8_t* image = stbi_load(imagePath, &width, &height, &channels, 0);
+    uint8_t* image = stbi_load(imagePath, &width, &height, &channels, nbchan);
     if (!image) {
         std::cerr << "Error in opening the image " << imagePath <<std::endl;
     }
         size_t size = sizeof(image) / sizeof(image[0]);  
-
     std::vector<unsigned char> vecImg(image, image+ size );
     Mat<unsigned char> imgMat(image,height, width, channels) ;
     stbi_image_free(image);

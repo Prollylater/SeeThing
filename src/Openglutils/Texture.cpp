@@ -8,6 +8,8 @@
         
     }
 
+
+//TODO Let user set unit here rather than prior
 void bindTexture(const TextureResource &texResource, const GLuint & program, const char *uniform)
 {
 

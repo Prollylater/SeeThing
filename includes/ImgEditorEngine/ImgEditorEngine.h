@@ -20,9 +20,9 @@ class OpenGLEngine;
 
 namespace appobj
 {
-  extern OpenGLEngine glengine;
-  extern Canvas canvas;
-
+    extern OpenGLEngine glengine;
+    extern Canvas canvas;
+    // Create an engine that withold
 }
 
 class OpenGLEngine
@@ -33,11 +33,9 @@ class OpenGLEngine
 
 private:
     // Store Loaded vao
-    std::vector<BufferIDsGroups> loadedvao;
-    int activevao;
+    BufferIDsGroups loadedvao;
     // Store Loaded texture
-    std::vector<TextureResource> imageress;
-    int activetexture;
+    TextureResource imageress;
     // FBO
     GLuint fbo;
     TextureResource fbotext;
@@ -52,7 +50,7 @@ public:
 
     OpenGLEngine(const OpenGLEngine &) = delete;
     OpenGLEngine &operator=(const OpenGLEngine &) = delete;
-
+    void updatefboTexture(GLuint *out_texture, int *out_width, int *out_height);
     bool initImrender();
     bool outputImg(const char *datapath, GLuint *out_texture, int *out_width, int *out_height);
 

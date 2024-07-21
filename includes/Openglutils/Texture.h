@@ -19,7 +19,7 @@ void initTextRess(TextureResource &texResource, GLuint p_texture_id);
 
 void bindTexture(const TextureResource &texResource, const GLuint &program, const char *uniform);
 
-void release( TextureResource &texResource);
+void release(TextureResource &texResource);
 
 void freeTexture(TextureResource &texResource);
 
@@ -39,21 +39,21 @@ template <>
 struct TextTraits<TextType::MT_UC>
 {
     typedef unsigned char Type;
-    static constexpr int data_type = GL_UNSIGNED_BYTE;
+    static constexpr GLenum data_type = GL_UNSIGNED_BYTE;
 };
 
 template <>
 struct TextTraits<TextType::MT_UINT>
 {
     typedef unsigned int Type;
-    static constexpr int data_type = GL_UNSIGNED_INT;
+    static constexpr GLenum data_type = GL_UNSIGNED_INT;
 };
 
 template <>
 struct TextTraits<TextType::MT_FLOAT>
 {
     typedef float Type;
-    static constexpr int data_type = GL_FLOAT;
+    static constexpr GLenum data_type = GL_FLOAT;
 };
 
 using textuc = TextTraits<TextType::MT_UC>;
@@ -63,7 +63,7 @@ using textuint = TextTraits<TextType::MT_FLOAT>;
 template <typename T, typename U>
 GLuint makeTextureMat(const int unit,
                       const Mat<T> &im,
-                      const GLenum texel_type)
+                      const GLenum texel_type = GL_RGB)
 {
     if (im.getCols() == 0 && im.getRows() == 0)
     {
@@ -87,6 +87,10 @@ GLuint makeTextureMat(const int unit,
         break;
     case 3:
         format = GL_RGB;
+        if (im.getCols() % 3 != 0)
+        {
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        }
         break;
     case 4:
         format = GL_RGBA;
@@ -94,7 +98,7 @@ GLuint makeTextureMat(const int unit,
     default:
         break;
     }
-    int data_type = U::data_type;
+    GLenum data_type = U::data_type;
 
     GLuint texture;
     glGenTextures(1, &texture);
@@ -103,12 +107,14 @@ GLuint makeTextureMat(const int unit,
         std::cerr << "Failed to generate texture." << std::endl;
         return 0;
     }
+    // TODO NO use here remove
 
     glActiveTexture(GL_TEXTURE0 + unit);
+
     glBindTexture(GL_TEXTURE_2D, texture);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
@@ -122,6 +128,15 @@ GLuint makeTextureMat(const int unit,
 
     // prefiltre la texture
     glGenerateMipmap(GL_TEXTURE_2D);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR)
+    {
+        std::cerr << "Error after making texture: " << error << std::endl;
+        return 0;
+    }
 
     return texture;
 }

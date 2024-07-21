@@ -26,8 +26,6 @@ enum PixlColorSpace : int
     Gray
 };
 
- 
-
 template <typename T>
 class Mat
 {
@@ -55,7 +53,7 @@ public:
     const T *getData() const { return data; }
 
     int getCols() const { return cols; }
-    //TODO finish this
+    // TODO finish this
     /* int resizedims(int _rows =this->rows,int _cols = this->cols,
 
      //TODO This
@@ -79,7 +77,7 @@ public:
     void toBGRSpace();
     void toRGBSpace();
     void toGRAYSpace();
-    void toLabSpace(SlicParameter& conv_param);
+    void toLabSpace(SlicParameter &conv_param);
     void toHsvSpace();
 
     // Operator //
@@ -265,7 +263,8 @@ Mat<T>::Mat(T *_data, int _rows, int _cols, int _channels) : rows(_rows),
     // std::cout << "Creared from many shit" << std::endl;
 
     data = new T[rows * cols * channels];
-    std::memcpy(data, _data, rows * cols * channels * sizeof(T));
+    //Better than memcopy ?
+    std::memmove(data, _data, rows * cols * channels * sizeof(T));
     clrspace = (channels > 2) ? PixlColorSpace::RGB : PixlColorSpace::Gray;
     /* Potential managment of PixlColorSpace, Better use setter though
     if(channels > 2){
@@ -306,23 +305,22 @@ Mat<T>::Mat(Mat<T> &&otherMat) noexcept
 // Initialization
 template <typename T>
 void Mat<T>::zeros()
-{   
-    //TOTRY Benchmark this
+{
+    // TOTRY Benchmark this
     /*for (int i = 0; i < rows * cols * channels; ++i)
     {
         // Default constructor of each value
         data[i] = T();
     }
-    */ 
+    */
     std::fill(data, data + rows * cols * channels, T{});
-
 }
 
 // Initialization
 template <typename T>
 void Mat<T>::setTo(T val)
 {
-    //TOTRY Benchmark this
+    // TOTRY Benchmark this
     /*
     for (int i = 0; i < rows * cols * channels; ++i)
     {
@@ -330,7 +328,6 @@ void Mat<T>::setTo(T val)
         data[i] = val;
     }*/
     std::fill(data, data + rows * cols * channels, val);
-
 }
 
 template <typename T>
@@ -1010,7 +1007,7 @@ Mat<T> operator/(const Mat<T> &Mata, const T &scalar)
 // Using a switch statement with the enum
 // https://www.rroij.com/open-access/various-colour-spaces-and-colour-space-conversion-algorithms-44-48.pdf
 
-// Gamma Correction value 
+// Gamma Correction value
 #define Gamma_C_V 0.04045
 #define Gamma_C_D 12.92
 // https://docs.opencv.org/3.4/de/d25/imgproc_color_conversions.html
@@ -1065,8 +1062,8 @@ static XYZRefT XYZrefs[] = {
 // TODO control output Matrix
 template <typename T>
 
-//void Mat<T>::toLabSpace(bool divbool, int div_str, int xyzref )
-void Mat<T>::toLabSpace(SlicParameter& conv_param)
+// void Mat<T>::toLabSpace(bool divbool, int div_str, int xyzref )
+void Mat<T>::toLabSpace(SlicParameter &conv_param)
 {
     if (channels < 3)
     {
@@ -1257,4 +1254,3 @@ void Mat<T>::toHsvSpace()
 // Explicit instation
 //  Mat<float> linkerfloat;
 //  Mat<int> linkerint;
-

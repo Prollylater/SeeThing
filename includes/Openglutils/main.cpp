@@ -1,12 +1,12 @@
-// premier exemple : lecture et affichage d'un mesh
+// premier exemple : lecture et affichage d'un mesh fonctionnle
 /*
-#include "Vec.h"
-#include "Mat.h"
-#include "glcore.h"
-#include "Buffers.h"
-#include "Texture.h"
-#include "Program.h"
-#include <GLFW/glfw3.h>
+#insdsddsdsclude "Vec.h"
+#isdssdnclude "Mat.h"
+#includsddde "glcosdazasre.h"
+#indsdsdsclude "Buffers.h"
+#indssddssdclude "Texture.h"
+#insddssdsclude "Pazazrogram.h"
+#incazazlude <GLFaazazW/glfw3.h>
 
 
 unsigned count = 0;

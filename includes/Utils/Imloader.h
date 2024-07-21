@@ -4,7 +4,7 @@
 
 
 //Charge une image .png, .bmp, jpeg
-Mat<uint8_t> loadImg(const char* imagePath, bool flip);
+Mat<uint8_t> loadImg(const char* imagePath, bool flip, int nbchanels =3);
 
 
 template <typename T>
