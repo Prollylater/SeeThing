@@ -20,7 +20,12 @@ Mat<uint8_t> loadImg(const char* imagePath, bool flip , int nbchan ) {
     }
         size_t size = sizeof(image) / sizeof(image[0]);  
     std::vector<unsigned char> vecImg(image, image+ size );
-    Mat<unsigned char> imgMat(image,height, width, channels) ;
+
+    int final_chan = nbchan ? (nbchan !=0) : channels;
+    Mat<unsigned char> imgMat(image,height, width, final_chan) ;
+    //Considered channel is the desired number, not the actual number
+    //Mat<unsigned char> imgMat(image,height, width, nbchan) ;
+
     stbi_image_free(image);
     return imgMat;
 }

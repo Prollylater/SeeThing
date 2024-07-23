@@ -1,6 +1,6 @@
 #ifndef _BUFFERS_H
 #define _BUFFERS_H
-
+//https://www.khronos.org/opengl/wiki/Common_Mistakes
 #include "glcore.h" //Include correct thing
 #include <vector>
 #include "Vec.h"

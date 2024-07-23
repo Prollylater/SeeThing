@@ -74,7 +74,6 @@ void ShowImageRenderingArea()
             std::string curr_img = fileDialog.GetSelected().string();
             display_states.setState(MainWinSt::displayed_im, appobj::glengine.outputImg(curr_img.c_str(), &display, &im_width, &im_height));
             IM_ASSERT(display_states.isTrue(MainWinSt::displayed_im));
-           // appobj::glengine.updatefboTexture(&display, &im_width, &im_height);
 
             fileDialog.ClearSelected();
         }
@@ -170,24 +169,56 @@ void ShowImageRenderingArea()
             glBindTexture(GL_TEXTURE_2D, display);
             ImGui::ShowMetricsWindow();
 
-            ImGui::Image((ImTextureID)(intptr_t)display, ImVec2(im_width*2, im_height*2), ImVec2(0, 1), ImVec2(1, 0));
+            ImGui::Image((ImTextureID)(intptr_t)display, ImVec2(im_width, im_height), ImVec2(0, 1), ImVec2(1, 0));
         }
+
         if (ImGui::IsWindowHovered())
         {
+            handleClrPencil(child_pos, child_size);
+
+            // TODO Eventually scale or push to the middle
             ImGui::Text("Hovering over Child Window!");
             ImVec2 widgetPos = ImGui::GetItemRectMin(); // Get position of the current widget
                                                         /* if (ImGui::IsMouseHoveringRect(widgetPos, ImVec2(widgetPos.x + 100, widgetPos.y + 20))) {
                                              }*/
+            ImVec2 wiPos = ImGui::GetCursorPos();
             ImGui::Text("%f %f", widgetPos.x, widgetPos.y);
+            ImGui::Text("%f %f", wiPos.x, wiPos.y);
         }
         ImGui::EndChild();
         // Center window
     }
+
     ImGui::End();
 
     bool clr_pen_bool = display_states.isTrue(MainWinSt::clr_pencil);
 
     ShowColorPicker(clr_pen_bool, color_pencil);
+}
+
+
+//TODO lack of precision here size are still not handled properly
+void handleClrPencil(ImVec2 windows_pos,ImVec2 windows_size){
+
+     // Check if the left mouse button was clicked
+    if (ImGui::IsMouseClicked(0))
+    {
+        // Get the mouse position in screen coordinates
+        ImVec2 mouse_pos = ImGui::GetMousePos();
+
+        // Convert to local window coordinates
+        ImVec2 local_pos = ImVec2(mouse_pos.x - windows_pos.x, mouse_pos.y - windows_pos.y);
+            ImGui::Text("Hovering over Child Window!");
+
+            ImGui::Text("%f %f", local_pos.x, local_pos.y);
+
+            ImGui::Text("%f %f", local_pos.x, local_pos.y);
+
+
+        // Use normalizedPos as needed
+    }
+
+
 }
 
 /*

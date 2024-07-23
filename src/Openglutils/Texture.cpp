@@ -1,10 +1,12 @@
 #include "Texture.h"
 
+//TODO Better setting unitg
   //Initialize the texture managment structure
-  void initTextRess (TextureResource &texResource, GLuint p_texture_id )
+  void initTextRess (TextureResource &texResource, GLuint p_texture_id, int p_unit )
     {
         glGenSamplers(1, &texResource.sampler_id);
         texResource.texture_id = p_texture_id;
+        texResource.unit = p_unit;
         
     }
 

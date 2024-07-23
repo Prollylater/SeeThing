@@ -1,6 +1,6 @@
 #ifndef _TEXTURE_H
 #define _TEXTURE_H
-
+// https://www.khronos.org/opengl/wiki/Common_Mistakes
 #include "glcore.h"
 #include <cstdio>
 #include <algorithm>
@@ -15,7 +15,7 @@ struct TextureResource
     TextureResource() = default;
 };
 // Initialize the texture managment structure
-void initTextRess(TextureResource &texResource, GLuint p_texture_id);
+void initTextRess(TextureResource &texResource, GLuint p_texture_id, int p_unit = 0);
 
 void bindTexture(const TextureResource &texResource, const GLuint &program, const char *uniform);
 
@@ -62,8 +62,7 @@ using textuint = TextTraits<TextType::MT_FLOAT>;
 
 template <typename T, typename U>
 GLuint makeTextureMat(const int unit,
-                      const Mat<T> &im,
-                      const GLenum texel_type = GL_RGB)
+                      const Mat<T> &im)
 {
     if (im.getCols() == 0 && im.getRows() == 0)
     {
@@ -77,6 +76,8 @@ GLuint makeTextureMat(const int unit,
         return 0;
     }
     GLenum format = GL_RGB;
+    GLenum texel_type = GL_RGB;
+
     switch (channels)
     {
     case 1:
@@ -94,6 +95,7 @@ GLuint makeTextureMat(const int unit,
         break;
     case 4:
         format = GL_RGBA;
+        texel_type = GL_RGBA ;
         break;
     default:
         break;
@@ -113,11 +115,7 @@ GLuint makeTextureMat(const int unit,
 
     glBindTexture(GL_TEXTURE_2D, texture);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-
+   
     glTexImage2D(GL_TEXTURE_2D, 0, texel_type, im.getCols(), im.getRows(), 0,
                  format, data_type, im.getData());
     if (glGetError() != GL_NO_ERROR)
@@ -127,7 +125,16 @@ GLuint makeTextureMat(const int unit,
     }
 
     // prefiltre la texture
-    glGenerateMipmap(GL_TEXTURE_2D);
+    //glGenerateMipmap(GL_TEXTURE_2D);
+
+     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST); // BY default this use a MIPMAP, hence yhou need to define the two parameter LEVEL
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+    //LImit the number of mipmap
+     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 
     glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -141,15 +148,19 @@ GLuint makeTextureMat(const int unit,
     return texture;
 }
 
+// Read Texture froma a file with load img
+// Texture is by default 3 channels RGB as this was the intended format at the start
+// RGBA is still usable in most situtaiton and preeferred whilde dealing with texture
+// TODO track function that can't handle RGBA
+//Can't handle both RGBA Picture and RGB at the same time
 template <typename T>
 GLuint read_texture(const int unit,
-                    const char *filename, Mat<uint8_t> &img,
-                    const GLenum texel_type = GL_RGB)
+                    const char *filename, Mat<uint8_t> &img, int nbchannels = 0)
 {
 
-    img = loadImg(filename, true);
+    img = loadImg(filename, true, nbchannels);
 
-    GLuint texture = makeTextureMat<uint8_t, T>(unit, img, texel_type);
+    GLuint texture = makeTextureMat<uint8_t, T>(unit, img);
 
     return texture;
 }

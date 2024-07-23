@@ -43,6 +43,12 @@ BufferIDsGroups createBuffers(const std::vector<Vec<float>> &verticestab, const 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
     glEnableVertexAttribArray(0);
 
+     /* std::vector<float> canvastext = {
+    0.0f, 0.0f,
+        0.0f, 1.0f,
+        1.0f, 1.0f,
+        1.0f, 0.0f};
+*/
     // Bind Texturecoordinate
     if (texcoords.size() && texcoords.size() == verticestab.size())
     {
@@ -52,7 +58,7 @@ BufferIDsGroups createBuffers(const std::vector<Vec<float>> &verticestab, const 
         glEnableVertexAttribArray(1);
     }
     // TODO Add normal in case going to 3D
-    
+
     // Create Read to mesh
 
     if (indices.size())
@@ -63,11 +69,11 @@ BufferIDsGroups createBuffers(const std::vector<Vec<float>> &verticestab, const 
     glBindVertexArray(0);
     GLenum error = glGetError();
 
-        if (error != GL_NO_ERROR)
-        {
-            std::cerr << "Error during vertex buffer initialization: " << error << std::endl;
-             return BufferIDsGroups(0, 0, 0, 0);
-        }
+    if (error != GL_NO_ERROR)
+    {
+        std::cerr << "Error during vertex buffer initialization: " << error << std::endl;
+        return BufferIDsGroups(0, 0, 0, 0);
+    }
 
     return BufferIDsGroups(vao, vbo, ebo, indices.size());
 }
@@ -77,16 +83,17 @@ GLuint createFBO(TextureResource &texress)
 
     GLuint fbo;
     glGenFramebuffers(1, &fbo);
-      GLenum error = glGetError();
+    GLenum error = glGetError();
     if (error != GL_NO_ERROR)
     {
         std::cerr << "Error after FBO Generations: " << error << std::endl;
         return 0;
     }
 
-
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-     error = glGetError();
+
+
+    error = glGetError();
     if (error != GL_NO_ERROR)
     {
         std::cerr << "Error after glBindFramebuffer: " << error << std::endl;
@@ -128,7 +135,7 @@ void useFbo(GLuint fbo)
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 }
 
-//TODO Useful ?
+// TODO Useful ?
 void attachFbo(GLuint fbo, TextureResource &texress)
 {
 

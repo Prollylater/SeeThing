@@ -44,8 +44,7 @@ bool OpenGLEngine::initImrender()
 
     };
 
-    std::vector<unsigned> indices = {0, 1, 2,
-                                     2, 3, 0};
+    std::vector<GLuint> indices = {0, 1, 2, 2, 3, 0};
 
     loadedvao = createBuffers(canvas, indices, canvastext);
     // TODO Array of shader for each change
@@ -74,39 +73,40 @@ void OpenGLEngine::renderTexture()
     // Take care of each Ui components
 }
 */
-// Actual opengl rendering in viewport with new Texture , maybe useless
-// From fbo
-void OpenGLEngine::updatefboTexture(GLuint *out_texture, int *out_width, int *out_height)
+// Opengl rendering of the current base texture to the fbo
+void OpenGLEngine::copyTextureToFBO(GLuint &p_fbo, int width , int height)
 {
-    
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
-static int a  = 0;
 
-    while(a!=1000 && a >0){
-        a;
+//Set viewport to correct size
+  
+    glViewport(0, 0, width, height);
 
-    }
-   a++;
     prog.reset();
     prog.init("./ressources/shaders/imgoutput.vs", "./ressources/shaders/imgoutput.fs");
 
     prog.use();
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, p_fbo);
+    GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
+    {
+        std::cerr << "Framebuffer not complete: " << fboStatus << std::endl;
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        return;
+    }
     glBindVertexArray(loadedvao.m_vao_id);
 
-  
-    bindTexture(imageress, prog.shader_id, "image_color");
-    std::cout<<"id" << imageress.unit << std::endl;
+
+
+
+    bindTexture(copytext, prog.shader_id, "image_color");
+    std::cout << "id" << prog.shader_id << std::endl;
     glDrawElements(GL_TRIANGLES, loadedvao.m_count, GL_UNSIGNED_INT, 0);
 
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, out_width);
-    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, out_height);
-    std::cout<<out_width<<std::endl;
-    
-    
+
     GLenum error = glGetError();
     if (error != GL_NO_ERROR)
     {
@@ -129,9 +129,11 @@ bool OpenGLEngine::outputImg(const char *datapath, GLuint *out_texture, int *out
 
     // Simplify the call on the two line under
     Mat<uint8_t> tmpmat;
-    // Load image in texture and in the mat object
-
+    // Load image in two texture and in the mat object
+    //Second texture may have no purpose out in the current build
     initTextRess(imageress, read_texture<textuc>(0, datapath, tmpmat));
+
+    initTextRess(copytext, makeTextureMat<uint8_t, textuc>(0, tmpmat));
 
     Layer new_img(tmpmat);
     if (appobj::canvas.getLayerNb() > 0)
@@ -157,6 +159,7 @@ bool OpenGLEngine::outputImg(const char *datapath, GLuint *out_texture, int *out
     *out_width = tmpmat.getCols();
     *out_height = tmpmat.getRows();
 
+    //copyTextureToFBO(fbo,*out_width,*out_height );
     // FBO texture
     *out_texture = imageress.texture_id;
     // NO rendering is necessary here

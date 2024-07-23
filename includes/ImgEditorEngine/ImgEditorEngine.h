@@ -38,7 +38,8 @@ private:
     TextureResource imageress;
     // FBO
     GLuint fbo;
-    TextureResource fbotext;
+    //Texture used to render to fbo without frame 
+    TextureResource copytext;
     // Store main Shader
     Program prog;
 
@@ -50,7 +51,7 @@ public:
 
     OpenGLEngine(const OpenGLEngine &) = delete;
     OpenGLEngine &operator=(const OpenGLEngine &) = delete;
-    void updatefboTexture(GLuint *out_texture, int *out_width, int *out_height);
+    void copyTextureToFBO(GLuint& fbo, int width , int height);
     bool initImrender();
     bool outputImg(const char *datapath, GLuint *out_texture, int *out_width, int *out_height);
 

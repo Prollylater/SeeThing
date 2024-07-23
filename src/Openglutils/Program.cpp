@@ -103,7 +103,7 @@ void Program::detachAllShaders(GLuint program)
 {
     if (glIsProgram(program) == GL_FALSE)
     {
-        std::cerr << "Invalid program ID provided in detachAllShaders." << std::endl;
+        std::cerr << "Invalid program ID provided in detachAllShaders or Unintialized Program." << std::endl;
         return;
     }
 
