@@ -195,12 +195,11 @@ void OpenGLEngine::renderColchange(const Vec<GLfloat> &new_coord, const GLuint &
 }*/
 
 // TODO Look into the performance and overhead cost here
-void OpenGLEngine::renderColChange(std::vector<Vec<GLfloat>> &to_color, const Vec<GLfloat> &color, int width, int height)
+void OpenGLEngine::renderColChange(std::vector<Vec<GLfloat>> &to_color, const Vec<GLfloat> &color, int width, int height,int pt_size)
 {
+glEnable(GL_PROGRAM_POINT_SIZE);
 
     BufferIDsGroups work_vao = createBuffers(to_color);
-    
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Set viewport to correct size
     glViewport(0, 0, width, height);
@@ -219,10 +218,23 @@ void OpenGLEngine::renderColChange(std::vector<Vec<GLfloat>> &to_color, const Ve
 
     // glBindFramebuffer(GL_FRAMEBUFFER, p_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+
+    if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
+    {
+        std::cerr << "Framebuffer not complete: " << fboStatus << std::endl;
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        return;
+    }
     glBindVertexArray(work_vao.m_vao_id);
     prog.addUniform3("new_color", color);
-    //Directly use the size of the to color arrray sinnce no ebo were crearted for this
-    //glDrawElements(GL_POINTS, to_color.size(), GL_UNSIGNED_INT, 0);
+    prog.addUniform1("text_height", height);
+    prog.addUniform1("text_width",width );
+    prog.addUniform1("pt_size",pt_size );
+
+
+    // Directly use the size of the to color arrray sinnce no ebo were crearted for this
+    // glDrawElements(GL_POINTS, to_color.size(), GL_UNSIGNED_INT, 0);
     glDrawArrays(GL_POINTS, 0, to_color.size()); // Draw 1 point
 
     error = glGetError();
@@ -233,6 +245,7 @@ void OpenGLEngine::renderColChange(std::vector<Vec<GLfloat>> &to_color, const Ve
 
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+glDisable(GL_PROGRAM_POINT_SIZE);
 
     freeBuffers(work_vao);
     error = glGetError();

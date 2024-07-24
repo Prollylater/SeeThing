@@ -174,8 +174,9 @@ void ShowImageRenderingArea()
 
         if (ImGui::IsWindowHovered())
         {
+            // if( display_states.isTrue(MainWinSt::clr_pencil)){
             handleClrPencil(child_pos, child_size, im_width, im_height, color_pencil);
-
+            //}
             // TODO Eventually scale or push to the middle
             ImGui::Text("Hovering over Child Window!");
             ImVec2 widgetPos = ImGui::GetItemRectMin(); // Get position of the current widget
@@ -202,15 +203,19 @@ void ShowImageRenderingArea()
     // - You can also use regular integer: it is forever guaranteed that 0=Left, 1=Right, 2=Middle.
 
 */
+//TODO monitor efficency of this method and the associated method
 // TODO lack of precision here size are still not handled properly
 void handleClrPencil(ImVec2 windows_pos, ImVec2 windows_size, int img_w, int img_h, ImVec4 color)
 {
-
-    static std::set<Vec<int>> positions;
+    // COuld be GLINT instead of float
+    static std::set<Vec<GLfloat>> positions;
     // Get the window's position and size
 
-    static bool isDragging = false;
     // Detect if the mouse is being dragged
+
+    static bool isDragging = false;
+    static int lastcall = 0;
+    lastcall++;
 
     // Check if the left mouse button was clicked
     if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
@@ -249,11 +254,25 @@ void handleClrPencil(ImVec2 windows_pos, ImVec2 windows_size, int img_w, int img
         ImGui::Text("%f %f", local_pos.x, local_pos.y);
 
         // If inserted
-     /*  if (positions.insert(Vec<int>(local_pos.x, local_pos.y, 0)).second)
+        if (!((local_pos.x < img_w && local_pos.x > 0) && (local_pos.y < img_h && local_pos.y > 0)))
         {
+            return;
+        }
+        Vec<float> vec(local_pos.x, local_pos.y, 0) ;
+         auto inserted = positions.insert(vec);
+        if (inserted.second)
+       {
             // Vec<int>(img_w? , img_h , 0.0);
             // dispatchColorCall(color_changes);
-        }*/ 
+            if (lastcall >= 5)
+            {
+                lastcall = 0;
+                std::vector<Vec<GLfloat>> vectmp(positions.begin(), positions.end());
+               Vec<GLfloat> tmp(color.x, color.y, color.z);
+
+                appobj::glengine.renderColChange(vectmp, tmp, img_w, img_h);
+            }
+        }
 
         // Store the position
     }

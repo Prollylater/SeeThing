@@ -57,7 +57,7 @@ public:
 
     void renderTexture();
 
-    void renderColChange(std::vector<Vec<GLfloat>> &to_color, const Vec<GLfloat> &color, int width, int height);
+    void renderColChange(std::vector<Vec<GLfloat>> &to_color, const Vec<GLfloat> &color, int width, int height, int pt_size = 5);
 
 };
 

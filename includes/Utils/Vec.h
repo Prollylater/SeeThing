@@ -127,13 +127,13 @@ struct Vec
 
   // Comparison
 
-  bool operator<(const Vec<T> vec) const
+  bool operator<(const Vec<T>& vec) const
   {
     return (x < vec.x) || ((x == vec.x) && ((y < vec.y) || ((y == vec.y) && (z < vec.z))));
   }
 
   
-  bool operator!=(const Vec<T> vec) const
+  bool operator!=(const Vec<T>&vec) const
   {
     return (x != vec.x) && (y != vec.y) && (z != vec.z);
   }
