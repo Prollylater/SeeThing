@@ -4,8 +4,7 @@
 #include <cstring>
 #include <stdexcept>
 
-
-template <typename T> 
+template <typename T>
 struct Vec
 {
   T x, y, z;
@@ -126,14 +125,26 @@ struct Vec
     return Vec<T>(tmpx, tmpxy, tmpxz);
   }
 
+  // Comparison
+
+  bool operator<(const Vec<T> vec) const
+  {
+    return (x < vec.x) || ((x == vec.x) && ((y < vec.y) || ((y == vec.y) && (z < vec.z))));
+  }
+
   
-    friend std::ostream &operator<<(std::ostream &os, const Vec<T> &vec)
-    {
-      os<<  "x: " << vec.x
-      << "y: " << vec.y
-      <<"z: "<<vec.z <<std::endl;
-        return os;
-    }
+  bool operator!=(const Vec<T> vec) const
+  {
+    return (x != vec.x) && (y != vec.y) && (z != vec.z);
+  }
+
+  friend std::ostream &operator<<(std::ostream &os, const Vec<T> &vec)
+  {
+    os << "x: " << vec.x
+       << "y: " << vec.y
+       << "z: " << vec.z << std::endl;
+    return os;
+  }
 };
 
 #include <cmath>

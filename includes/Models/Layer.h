@@ -21,6 +21,25 @@ public:
         return image->getCols() * image->getRows();
     }
 
+     int getWidth()
+    {
+        if (image==nullptr)
+        {
+            return 0;
+        }
+        return image->getCols();
+    }
+
+
+  int getHeight()
+    {
+        if (image==nullptr)
+        {
+            return 0;
+        }
+        return image->getRows();
+    }
+
     // TODO Make this private and create function handling mangagment
     // private
     Mat<uint8_t> *image;

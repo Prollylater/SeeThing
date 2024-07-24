@@ -174,7 +174,7 @@ void ShowImageRenderingArea()
 
         if (ImGui::IsWindowHovered())
         {
-            handleClrPencil(child_pos, child_size);
+            handleClrPencil(child_pos, child_size, im_width, im_height, color_pencil);
 
             // TODO Eventually scale or push to the middle
             ImGui::Text("Hovering over Child Window!");
@@ -196,34 +196,70 @@ void ShowImageRenderingArea()
     ShowColorPicker(clr_pen_bool, color_pencil);
 }
 
+/*
+    // Inputs Utilities: Mouse specific
+    // - To refer to a mouse button, you may use named enums in your code e.g. ImGuiMouseButton_Left, ImGuiMouseButton_Right.
+    // - You can also use regular integer: it is forever guaranteed that 0=Left, 1=Right, 2=Middle.
 
-//TODO lack of precision here size are still not handled properly
-void handleClrPencil(ImVec2 windows_pos,ImVec2 windows_size){
+*/
+// TODO lack of precision here size are still not handled properly
+void handleClrPencil(ImVec2 windows_pos, ImVec2 windows_size, int img_w, int img_h, ImVec4 color)
+{
 
-     // Check if the left mouse button was clicked
-    if (ImGui::IsMouseClicked(0))
+    static std::set<Vec<int>> positions;
+    // Get the window's position and size
+
+    static bool isDragging = false;
+    // Detect if the mouse is being dragged
+
+    // Check if the left mouse button was clicked
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
     {
         // Get the mouse position in screen coordinates
         ImVec2 mouse_pos = ImGui::GetMousePos();
 
         // Convert to local window coordinates
         ImVec2 local_pos = ImVec2(mouse_pos.x - windows_pos.x, mouse_pos.y - windows_pos.y);
-            ImGui::Text("Hovering over Child Window!");
+        ImGui::Text("Clicking over Child Window!");
 
-            ImGui::Text("%f %f", local_pos.x, local_pos.y);
+        ImGui::Text("%f %f", local_pos.x, local_pos.y);
 
-            ImGui::Text("%f %f", local_pos.x, local_pos.y);
+        if ((local_pos.x < img_w && local_pos.x > 0) && (local_pos.y < img_h && local_pos.y > 0))
+        { // Dispatch a draw call
+          // Vec<int>(img_w? , img_h , 0.0);
+          // dispatchColorCall(color_changes);
+            Vec<GLfloat> tmp(color.x, color.y, color.z);
+            std::vector<Vec<GLfloat>> vectmp = {
+                Vec(local_pos.x, local_pos.y, 0.0f),
+            };
 
+            appobj::glengine.renderColChange(vectmp, tmp, img_w, img_h);
+        }
 
         // Use normalizedPos as needed
     }
 
+    else if (ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0.1f))
+    {
+        isDragging = true;
+        ImVec2 mouse_pos = ImGui::GetMousePos();
+        // Convert to local window coordinates
+        ImVec2 local_pos = ImVec2(mouse_pos.x - windows_pos.x, mouse_pos.y - windows_pos.y);
 
+        ImGui::Text("%f %f", local_pos.x, local_pos.y);
+
+        // If inserted
+     /*  if (positions.insert(Vec<int>(local_pos.x, local_pos.y, 0)).second)
+        {
+            // Vec<int>(img_w? , img_h , 0.0);
+            // dispatchColorCall(color_changes);
+        }*/ 
+
+        // Store the position
+    }
+    else if (isDragging)
+    {
+        isDragging = false;
+        positions.clear();
+    }
 }
-
-/*
-
-
-
-
-*/

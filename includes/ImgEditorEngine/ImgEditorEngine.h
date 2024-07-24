@@ -56,7 +56,9 @@ public:
     bool outputImg(const char *datapath, GLuint *out_texture, int *out_width, int *out_height);
 
     void renderTexture();
-    void renderColchange(const Vec<GLfloat> &new_coord, const GLuint &textsize, const Vec<GLfloat> &color);
+
+    void renderColChange(std::vector<Vec<GLfloat>> &to_color, const Vec<GLfloat> &color, int width, int height);
+
 };
 
 class ImgEditorEngine

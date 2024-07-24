@@ -74,46 +74,6 @@ void OpenGLEngine::renderTexture()
 }
 */
 // Opengl rendering of the current base texture to the fbo
-void OpenGLEngine::copyTextureToFBO(GLuint &p_fbo, int width , int height)
-{
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-//Set viewport to correct size
-  
-    glViewport(0, 0, width, height);
-
-    prog.reset();
-    prog.init("./ressources/shaders/imgoutput.vs", "./ressources/shaders/imgoutput.fs");
-
-    prog.use();
-    glBindFramebuffer(GL_FRAMEBUFFER, p_fbo);
-    GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
-    {
-        std::cerr << "Framebuffer not complete: " << fboStatus << std::endl;
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        return;
-    }
-    glBindVertexArray(loadedvao.m_vao_id);
-
-
-
-
-    bindTexture(copytext, prog.shader_id, "image_color");
-    std::cout << "id" << prog.shader_id << std::endl;
-    glDrawElements(GL_TRIANGLES, loadedvao.m_count, GL_UNSIGNED_INT, 0);
-
-    glBindVertexArray(0);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    GLenum error = glGetError();
-    if (error != GL_NO_ERROR)
-    {
-        std::cerr << "Error durings engine update texture function: " << error << std::endl;
-    }
-    // Take care of each Ui components
-}
 
 // TOODO
 // Layer choice
@@ -130,12 +90,13 @@ bool OpenGLEngine::outputImg(const char *datapath, GLuint *out_texture, int *out
     // Simplify the call on the two line under
     Mat<uint8_t> tmpmat;
     // Load image in two texture and in the mat object
-    //Second texture may have no purpose out in the current build
+    // Second texture may have no purpose out in the current build
     initTextRess(imageress, read_texture<textuc>(0, datapath, tmpmat));
 
     initTextRess(copytext, makeTextureMat<uint8_t, textuc>(0, tmpmat));
 
     Layer new_img(tmpmat);
+    // Currently only deal with the layer 0
     if (appobj::canvas.getLayerNb() > 0)
     {
         appobj::canvas.addAtLayer(new_img, 0);
@@ -159,8 +120,8 @@ bool OpenGLEngine::outputImg(const char *datapath, GLuint *out_texture, int *out
     *out_width = tmpmat.getCols();
     *out_height = tmpmat.getRows();
 
-    //copyTextureToFBO(fbo,*out_width,*out_height );
-    // FBO texture
+    // copyTextureToFBO(fbo,*out_width,*out_height );
+    //  FBO texture
     *out_texture = imageress.texture_id;
     // NO rendering is necessary here
 
@@ -171,7 +132,49 @@ bool OpenGLEngine::outputImg(const char *datapath, GLuint *out_texture, int *out
     }
     return 1;
 }
+
+void OpenGLEngine::copyTextureToFBO(GLuint &p_fbo, int width, int height)
+{
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // Set viewport to correct size
+
+    glViewport(0, 0, width, height);
+
+    prog.reset();
+    prog.init("./ressources/shaders/imgoutput.vs", "./ressources/shaders/imgoutput.fs");
+
+    prog.use();
+    glBindFramebuffer(GL_FRAMEBUFFER, p_fbo);
+    GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
+    {
+        std::cerr << "Framebuffer not complete: " << fboStatus << std::endl;
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        return;
+    }
+    glBindVertexArray(loadedvao.m_vao_id);
+
+    bindTexture(copytext, prog.shader_id, "image_color");
+    std::cout << "id" << prog.shader_id << std::endl;
+    glDrawElements(GL_TRIANGLES, loadedvao.m_count, GL_UNSIGNED_INT, 0);
+
+    glBindVertexArray(0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR)
+    {
+        std::cerr << "Error durings engine update texture function: " << error << std::endl;
+    }
+    // Take care of each Ui components
+}
+
+/////////////////////////////////////Dispatch
+
 // Rendering directly to FBO with colour change
+/*
 void OpenGLEngine::renderColchange(const Vec<GLfloat> &new_coord, const GLuint &textsize, const Vec<GLfloat> &color)
 {
     glClear(GL_COLOR_BUFFER_BIT);
@@ -188,6 +191,56 @@ void OpenGLEngine::renderColchange(const Vec<GLfloat> &new_coord, const GLuint &
     prog.addUniform3("new_color", color);
     prog.addUniform1("texture_size", textsize);
 
+    // Take care of each Ui components
+}*/
+
+// TODO Look into the performance and overhead cost here
+void OpenGLEngine::renderColChange(std::vector<Vec<GLfloat>> &to_color, const Vec<GLfloat> &color, int width, int height)
+{
+
+    BufferIDsGroups work_vao = createBuffers(to_color);
+    
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // Set viewport to correct size
+    glViewport(0, 0, width, height);
+
+    prog.reset();
+    prog.init("./ressources/shaders/colchange.vs", "./ressources/shaders/colchange.fs");
+
+    prog.use();
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR)
+    {
+        std::cerr << " durdfdfdf update texture function: " << error << std::endl;
+    }
+    // TODP
+    //  Correct fbo could be passed by a "dispatcher" handling the current layer
+
+    // glBindFramebuffer(GL_FRAMEBUFFER, p_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glBindVertexArray(work_vao.m_vao_id);
+    prog.addUniform3("new_color", color);
+    //Directly use the size of the to color arrray sinnce no ebo were crearted for this
+    //glDrawElements(GL_POINTS, to_color.size(), GL_UNSIGNED_INT, 0);
+    glDrawArrays(GL_POINTS, 0, to_color.size()); // Draw 1 point
+
+    error = glGetError();
+    if (error != GL_NO_ERROR)
+    {
+        std::cerr << " durings rendercolor  update texture function: " << error << std::endl;
+    }
+
+    glBindVertexArray(0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    freeBuffers(work_vao);
+    error = glGetError();
+
+    if (error != GL_NO_ERROR)
+    {
+        std::cerr << "Error during color update  function: " << error << std::endl;
+    }
     // Take care of each Ui components
 }
 

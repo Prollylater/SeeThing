@@ -9,4 +9,4 @@
 
 //Define the main windows where image are rendered
 void ShowImageRenderingArea();
-void handleClrPencil(ImVec2 windows_pos,ImVec2 windows_size);
+void handleClrPencil(ImVec2 windows_pos,ImVec2 windows_size, int img_w, int img_h, ImVec4 color);

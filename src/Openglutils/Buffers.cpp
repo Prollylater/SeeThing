@@ -31,8 +31,6 @@ BufferIDsGroups createBuffers(const std::vector<Vec<float>> &verticestab, const 
     // Generate all vertex
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
-    glGenBuffers(1, &vbotex);
-    glGenBuffers(1, &ebo);
 
     // Bind vao in which everything will be stored
     glBindVertexArray(vao);
@@ -43,15 +41,10 @@ BufferIDsGroups createBuffers(const std::vector<Vec<float>> &verticestab, const 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
     glEnableVertexAttribArray(0);
 
-     /* std::vector<float> canvastext = {
-    0.0f, 0.0f,
-        0.0f, 1.0f,
-        1.0f, 1.0f,
-        1.0f, 0.0f};
-*/
     // Bind Texturecoordinate
     if (texcoords.size() && texcoords.size() == verticestab.size())
     {
+        glGenBuffers(1, &vbotex);
         glBindBuffer(GL_ARRAY_BUFFER, vbotex);
         glBufferData(GL_ARRAY_BUFFER, texcoords.size() * sizeof(Vec<float>), texcoords.data(), GL_STATIC_DRAW);
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
@@ -63,6 +56,7 @@ BufferIDsGroups createBuffers(const std::vector<Vec<float>> &verticestab, const 
 
     if (indices.size())
     {
+        glGenBuffers(1, &ebo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), indices.data(), GL_STATIC_DRAW);
     }
@@ -91,7 +85,6 @@ GLuint createFBO(TextureResource &texress)
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
 
     error = glGetError();
     if (error != GL_NO_ERROR)

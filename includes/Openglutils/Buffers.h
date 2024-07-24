@@ -19,8 +19,8 @@ struct BufferIDsGroups
 };
 
 // TODO REBIND FUNCTION
-BufferIDsGroups createBuffers(const std::vector<Vec<float>> &verticestab, const std::vector<GLuint> &indices,
-                              const std::vector<Vec<float>> &texcoords);
+BufferIDsGroups createBuffers(const std::vector<Vec<float>> &verticestab, const std::vector<GLuint> &indices ={},
+                              const std::vector<Vec<float>> &texcoords = {});
 
 GLuint createFBO(TextureResource &texress);
 void useFbo(GLuint fbo);

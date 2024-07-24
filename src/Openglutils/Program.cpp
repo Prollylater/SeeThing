@@ -98,7 +98,6 @@ void Program::reset()
     }
 }
 
-
 void Program::detachAllShaders(GLuint program)
 {
     if (glIsProgram(program) == GL_FALSE)
@@ -143,11 +142,23 @@ void Program::detachAllShaders(GLuint program)
 
 void Program::addUniform1(const char *uniform, const unsigned int value)
 {
+    GLint location = glGetUniformLocation(shader_id, uniform);
+
+    if (location == -1)
+    {
+        std::cerr << "Uniform " << uniform << " not found in shader." << std::endl;
+    }
     glUniform1ui(glGetUniformLocation(shader_id, uniform), value);
 }
 
 void Program::addUniform1(const char *uniform, const int &value)
 {
+    GLint location = glGetUniformLocation(shader_id, uniform);
+
+    if (location == -1)
+    {
+        std::cerr << "Uniform " << uniform << " not found in shader." << std::endl;
+    }
     glUniform1i(glGetUniformLocation(shader_id, uniform), value);
 }
 
@@ -158,22 +169,36 @@ void Program::addUniform1(const char *uniform, const float &value)
 
 void Program::addUniform2(const char *uniform, const Vec<GLfloat> &value)
 {
-    glUniform2fv(glGetUniformLocation(shader_id, uniform), 2, &value.x);
+    glUniform2fv(glGetUniformLocation(shader_id, uniform), 1, &value.x);
 }
 
 void Program::addUniform2(const char *uniform, const Vec<GLuint> &value)
 {
-    glUniform2uiv(glGetUniformLocation(shader_id, uniform), 2, &value.x);
+    glUniform2uiv(glGetUniformLocation(shader_id, uniform), 1, &value.x);
 }
 
 void Program::addUniform3(const char *uniform, const Vec<GLfloat> &value)
 {
-    glUniform3fv(glGetUniformLocation(shader_id, uniform), 3, &value.x);
+    GLenum error = glGetError();
+
+    GLint location = glGetUniformLocation(shader_id, uniform);
+
+    if (location == -1)
+    {
+        std::cerr << "Uniform " << uniform << " not found in shader." << std::endl;
+    }
+    glUniform3fv(glGetUniformLocation(shader_id, uniform), 1, &value.x);
 }
 
 void Program::addUniform3(const char *uniform, const Vec<GLuint> &value)
 {
-    glUniform3uiv(glGetUniformLocation(shader_id, uniform), 3, &value.x);
+    GLint location = glGetUniformLocation(shader_id, uniform);
+
+    if (location == -1)
+    {
+        std::cerr << "Uniform " << uniform << " not found in shader." << std::endl;
+    }
+    glUniform3uiv(glGetUniformLocation(shader_id, uniform), 1, &value.x);
 }
 
 /*
