@@ -6,8 +6,11 @@
 #include <string>
 
 
-void ShowSlicParameter(bool &show);
+void ShowSlicParameter(bool &show , GLuint& tex );
 
-void ShowSeedParameter(bool &show);
+
+void ShowSeedParameter(bool &show , GLuint& tex);
 
 void ShowRegionGrowingArea();
+
+void ShowRegionGrowingPanel(bool &show , GLuint& tex);

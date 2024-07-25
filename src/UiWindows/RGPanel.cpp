@@ -1,20 +1,25 @@
 #include "RGPanel.h"
+// TODO USe active texture
 
-
-void ShowSlicParameter(bool &show)
+// TODO Put description where it's necessary
+void ShowSlicParameter(bool &show, GLuint &tex)
 {
     if (!show)
     {
         return;
     }
-    // static float f1, f2, f3;
-    static int i1, i2, i3;
+    // Parameter for Slic algorithm
+    static int c_pix_k = 1;
+    static int lah_div_str = 1;
+    static int compactness_m = 1;
+    static bool div = false;
+    static int coloration_current_idx = 0;
 
-    ImGui::SliderInt("CenterPixel\nNumber K", &i1, 1, 1000);
+    ImGui::SliderInt("CenterPixel\nNumber K", &c_pix_k, 1, 1000);
     ImGui::Spacing();
-    ImGui::SliderInt("LabSpace\nDiv Strength", &i2, 1, 100);
+    ImGui::SliderInt("LabSpace\nDiv Strength", &lah_div_str, 1, 100);
     ImGui::Spacing();
-    ImGui::SliderInt("Compactness m", &i3, 1, 40);
+    ImGui::SliderInt("Compactness m", &compactness_m, 1, 40);
 
     // Spatial Coherence
 
@@ -41,16 +46,71 @@ void ShowSlicParameter(bool &show)
         }
         ImGui::EndCombo();
     }
+
+    ImGui::SameLine();
+    ImGui::Checkbox("Default Div", &div);
+
+    // Dispatch the Result
+    if (ImGui::Button("Execute"))
+    {
+        SlicParameter executeparam(c_pix_k, compactness_m, lah_div_str, xyz_current_idx,
+                                   div);
+        // TODO GEt active layver
+        Mat<uint8_t> &activeim = appobj::canvas.getLayer(0).getImage();
+        std::cout << appobj::canvas.getLayerNb() << std::endl;
+
+        std::cout << c_pix_k << std::endl;
+        std::cout << compactness_m << std::endl;
+        std::cout << lah_div_str << std::endl;
+        std::cout << div << std::endl;
+
+         Mat<uint8_t>
+            regiongrow = appobj::rgengine.dispatch(executeparam, activeim, coloration_current_idx);
+        // TODO Dispatch should take care of this ?
+         appobj::glengine.outputText(regiongrow, &tex);
+
+        // DispatchpRegionGrowing
+    };
+    ImGui::SameLine();
+    if (ImGui::Button("Default Param"))
+    {
+        c_pix_k = 100;
+        lah_div_str = 1;
+        compactness_m = 20;
+        xyz_current_idx = 0;
+        coloration_current_idx = 0;
+    };
+
+    const char *coloration[] = {"Random color", "Average color", "Mean value color"};
+    const char *combo_preview_coloration = coloration[coloration_current_idx];
+
+    if (ImGui::BeginCombo("Output Coloration Values", combo_preview_coloration, ImGuiComboFlags_WidthFitPreview))
+    {
+        for (int n = 0; n < IM_ARRAYSIZE(coloration); n++)
+        {
+            const bool is_selected = (coloration_current_idx == n);
+            if (ImGui::Selectable(coloration[n], is_selected))
+            {
+                coloration_current_idx = n;
+            }
+
+            // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+            if (is_selected)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
 }
 
-void ShowSeedParameter(bool &show)
+void ShowSeedParameter(bool &show, GLuint &tex)
 {
     // TODO Provide description POpup of each parameter
     // TODO Execute RegionGrowing Global or with selection
     static bool random = true;
     static float f1, f2, f3;
 
-    
     if (!show)
     {
         return;
@@ -108,9 +168,16 @@ void ShowSeedParameter(bool &show)
     };
 }
 
+
+//Result display may need better check or tto be removed
+// TODO The boolean system fro selection is weird
 void ShowRegionGrowingArea()
 {
-   bool show = win_states.isTrue(WinStates::rg_panel);
+    static GLuint display;
+    static int width;
+    static int height;
+
+    bool show = win_states.isTrue(WinStates::rg_panel);
 
     int count_button = 5;
     static int mode = 0;
@@ -124,6 +191,7 @@ void ShowRegionGrowingArea()
 
     if (ImGui::Begin("Segmentation Mode", &show, window_flags))
     {
+        static bool result_display = false;
 
         // Calculation to center child window
 
@@ -139,8 +207,8 @@ void ShowRegionGrowingArea()
 
         ImGui::Dummy(ImVec2((parent_size.x * 0.5f) - count_button * 20.0f, 1.0f));
         ImGui::SameLine();
-        const char *icons[] = {ICON_CI_SEARCH, "Slic", "Seed", ICON_CI_SEARCH, ICON_CI_SEARCH};
-       // const char *desctiptions[] = {ICON_CI_SEARCH, "Slic", "Seed", ICON_CI_SEARCH, ICON_CI_SEARCH};
+        const char *icons[] = {ICON_CI_SEARCH, "Slic", "Seed", ICON_CI_SEARCH, ICON_CI_PRESERVE_CASE};
+        // const char *desctiptions[] = {ICON_CI_SEARCH, "Slic", "Seed", ICON_CI_SEARCH, ICON_CI_SEARCH};
 
         for (int i = 0; i < count_button; ++i)
         {
@@ -170,6 +238,7 @@ void ShowRegionGrowingArea()
                 case 3:
                     break;
                 case 4:
+                    mode = 4;
                     break;
                 default:
                     break;
@@ -199,7 +268,7 @@ void ShowRegionGrowingArea()
             // Slic Algorithm Parameter
             // Including the colorspace parameter for labspace
             // The k, the number or retry also that other thing
-            ShowSlicParameter(modeb);
+            ShowSlicParameter(modeb, display);
 
             break;
         case 2:
@@ -207,17 +276,37 @@ void ShowRegionGrowingArea()
             // Seed Algorithm Parameter, the algorithm
             //  The number of seed,
             //  The posibility to place seed manually too
-            ShowSeedParameter(modeb);
+            ShowSeedParameter(modeb, display);
             break;
         case 3:
             modeb = (mode == 3);
-            // Nothing return the img to non thing
+            // Region painting
+
             break;
         case 4:
             modeb = (mode == 4);
-            // Region painting
+            // Nothing return the img to non thing
+
             break;
+        }
+
+        if (width * height != 0 && display != 0)
+        {   result_display = true;
+            ShowRegionGrowingPanel(result_display, display);
         }
     }
     ImGui::End();
+}
+
+void ShowRegionGrowingPanel(bool &show, GLuint &tex)
+{
+    if (!show)
+    {
+        return;
+    }
+    int width = appobj::canvas.getLayer(0).getWidth();
+    int height = appobj::canvas.getLayer(0).getHeight();
+
+    glBindTexture(GL_TEXTURE_2D, tex);
+    ImGui::Image((ImTextureID)(intptr_t)tex, ImVec2(width, height), ImVec2(0, 1), ImVec2(1, 0));
 }

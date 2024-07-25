@@ -103,12 +103,18 @@ Mat<uint8_t> composeSegMeanColor(const Mat<uint8_t> &src, std::vector<Region> &r
     }
     return resultMat;
 }
-
+//TODO REmove the write here
 // TODO 05/07/2024 Post GUI
 // Unknog bud in SLic when this is outputted twice
-Mat<unsigned char> composeSegRandCol(const Mat<uint8_t> &src, const std::vector<Region> &regions)
+Mat<uint8_t> composeSegRandCol(const Mat<uint8_t> &src, const std::vector<Region> &regions)
 {
-    Mat<unsigned char> resultMat(src.getRows(), src.getCols(), 3, PixlColorSpace::RGB);
+    Mat<uint8_t> resultMat(src.getRows(), src.getCols(), 3, PixlColorSpace::RGB);
+    std::cout<<std::endl;
+   
+    std::cout<<src.getRows()<<std::endl;
+    std::cout<<src.getCols()<<std::endl;
+    std::cout<<src.getRows()<<std::endl;
+    std::cout<<std::endl;
 
     // Hypothesis: The same memory is reassigned for resultMat when function is called again in the same scope + some weird behavior i haven't determined
     // Better Fix: Simply zeros each new Matrix

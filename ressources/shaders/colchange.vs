@@ -4,11 +4,11 @@ layout(location= 0) in vec3 position;
 
 uniform int text_width;
 uniform int text_height;
-uniform int pt_size;
+//uniform int pt_size;
 
 void main()
 {
-    gl_PointSize = 3; 
+    gl_PointSize = 2; 
     // Convert coordinate to ndc range [-1, 1]
     vec3 normalized_coord = vec3(position.x / text_width , position.y /text_height , position.z);
     normalized_coord = 2*(normalized_coord) - 1.0; 

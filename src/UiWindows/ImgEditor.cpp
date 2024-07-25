@@ -174,9 +174,14 @@ void ShowImageRenderingArea()
 
         if (ImGui::IsWindowHovered())
         {
-            // if( display_states.isTrue(MainWinSt::clr_pencil)){
-            handleClrPencil(child_pos, child_size, im_width, im_height, color_pencil);
-            //}
+            if (display_states.isTrue(MainWinSt::clr_pencil))
+            {
+                handleClrPencil(child_pos, child_size, im_width, im_height, color_pencil);
+            }
+
+            /*if( display_states.isTrue(MainWinSt::clr_pencil)){
+            handleClrFill(child_pos, child_size, im_width, im_height, color_pencil);
+            }*/
             // TODO Eventually scale or push to the middle
             ImGui::Text("Hovering over Child Window!");
             ImVec2 widgetPos = ImGui::GetItemRectMin(); // Get position of the current widget
@@ -203,8 +208,12 @@ void ShowImageRenderingArea()
     // - You can also use regular integer: it is forever guaranteed that 0=Left, 1=Right, 2=Middle.
 
 */
-//TODO monitor efficency of this method and the associated method
-// TODO lack of precision here size are still not handled properly
+// TODO monitor efficency of this method and the associated method
+// TODO buffering logic could be revised
+//  TODO lack of precision here,size are still not handled properly
+
+// Pass pt_size and add button for selectting pixel size
+
 void handleClrPencil(ImVec2 windows_pos, ImVec2 windows_size, int img_w, int img_h, ImVec4 color)
 {
     // COuld be GLINT instead of float
@@ -224,6 +233,7 @@ void handleClrPencil(ImVec2 windows_pos, ImVec2 windows_size, int img_w, int img
         ImVec2 mouse_pos = ImGui::GetMousePos();
 
         // Convert to local window coordinates
+
         ImVec2 local_pos = ImVec2(mouse_pos.x - windows_pos.x, mouse_pos.y - windows_pos.y);
         ImGui::Text("Clicking over Child Window!");
 
@@ -235,7 +245,8 @@ void handleClrPencil(ImVec2 windows_pos, ImVec2 windows_size, int img_w, int img
           // dispatchColorCall(color_changes);
             Vec<GLfloat> tmp(color.x, color.y, color.z);
             std::vector<Vec<GLfloat>> vectmp = {
-                Vec(local_pos.x, local_pos.y, 0.0f),
+                Vec(local_pos.x, (img_h - local_pos.y), 0.0f),
+
             };
 
             appobj::glengine.renderColChange(vectmp, tmp, img_w, img_h);
@@ -258,17 +269,19 @@ void handleClrPencil(ImVec2 windows_pos, ImVec2 windows_size, int img_w, int img
         {
             return;
         }
-        Vec<float> vec(local_pos.x, local_pos.y, 0) ;
-         auto inserted = positions.insert(vec);
+
+        // Reflip to make sur local pos translate to real texture orientation
+        Vec<float> vec(local_pos.x, (img_h - local_pos.y), 0);
+        auto inserted = positions.insert(vec);
         if (inserted.second)
-       {
+        {
             // Vec<int>(img_w? , img_h , 0.0);
             // dispatchColorCall(color_changes);
-            if (lastcall >= 5)
+            if (lastcall >= 4)
             {
                 lastcall = 0;
                 std::vector<Vec<GLfloat>> vectmp(positions.begin(), positions.end());
-               Vec<GLfloat> tmp(color.x, color.y, color.z);
+                Vec<GLfloat> tmp(color.x, color.y, color.z);
 
                 appobj::glengine.renderColChange(vectmp, tmp, img_w, img_h);
             }

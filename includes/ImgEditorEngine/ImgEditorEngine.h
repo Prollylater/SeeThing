@@ -1,7 +1,9 @@
 #ifndef EDITOR_H
 #define EDITOR_H
 #include "StructParam.h"
-#include "RegionGrowingAlg.h"
+
+// Engines
+#include "RegionGrowingEngine.h"
 
 #include <vector>
 #include <iostream>
@@ -15,7 +17,6 @@
 
 // TODO This might be in need of a lot of refactoring
 
-class ImgEditorEngine;
 class OpenGLEngine;
 
 namespace appobj
@@ -38,7 +39,7 @@ private:
     TextureResource imageress;
     // FBO
     GLuint fbo;
-    //Texture used to render to fbo without frame 
+    // Texture used to render to fbo without frame
     TextureResource copytext;
     // Store main Shader
     Program prog;
@@ -51,22 +52,14 @@ public:
 
     OpenGLEngine(const OpenGLEngine &) = delete;
     OpenGLEngine &operator=(const OpenGLEngine &) = delete;
-    void copyTextureToFBO(GLuint& fbo, int width , int height);
+    void copyTextureToFBO(GLuint &fbo, int width, int height);
     bool initImrender();
     bool outputImg(const char *datapath, GLuint *out_texture, int *out_width, int *out_height);
+    bool outputText(Mat<uint8_t> &image, GLuint *out_texture);
 
     void renderTexture();
 
     void renderColChange(std::vector<Vec<GLfloat>> &to_color, const Vec<GLfloat> &color, int width, int height, int pt_size = 5);
-
-};
-
-class ImgEditorEngine
-{
-
-    void dispatch(SlicParameter &)
-    {
-    }
 };
 
 #endif

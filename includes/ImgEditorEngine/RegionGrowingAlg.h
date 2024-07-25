@@ -786,13 +786,13 @@ double calcdistance5d(int x, int y, int i, int j, Mat<T> &image, const SlicParam
 
 // Move cluster centers to the lowest gradient position in a3 × 3 neighborhood.
 template <typename T>
-void moveCenterGradBased(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> supapixllist)
+void moveCenterGradBased(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> supapixllist, const LabParam &param)
 
 {
 
     Mat<T> imgLABspace(image);
     // Conversion to LABSPACEimg
-    imgLABspace.toLabSpace();
+    imgLABspace.toLabSpace(param);
     int b = 0;
 
     // TODO, create the matrix according to the number of pixl instead using the img dimension
@@ -880,7 +880,7 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
 {
     Mat<T> imgLABspace(image);
     // Conversion to LABSPACEimg
-    imgLABspace.toLabSpace();
+    imgLABspace.toLabSpace(param.m_labparam);
     int imgsize = image.getRows() * image.getCols();
 
     typedef std::map<std::pair<int, int>, std::pair<int, int>> ClustersMap;
@@ -995,20 +995,24 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
 }
 
 template <typename T>
-void SlicAlgorithm(/*const char* datapath*/Mat<T> image, const SlicParameter &param)
+void SlicAlgorithm(/*const char* datapath*/ std::vector<Region>& regions,const Mat<T>& image, const SlicParameter &param)
 {
     // Load the image
     // Mat<T> image = loadImg(datapath, true);
 
     // Load the region tha will hold the segmentation result
-    std::vector<Region> regions;
     std::vector<std::shared_ptr<Pixl>> superPixelCenter = selectSuperpixelCenter(image, regions, param.m_K);
     std::chrono::milliseconds durationa;
+    std::cout<<"in slic"<<regions.size()<<std::endl;
 
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+    moveCenterGradBased(image, superPixelCenter,param.m_labparam);
+    for ( Region reg : regions ){
+    std::cout<<reg.getSizePix()<<std::endl;
 
-    moveCenterGradBased(image, superPixelCenter);
-
+    }
+    composeSegRandCol(image, regions);
+   
     // writeImgPng("./Firs", displayRandCol, true);
     // std::cout<<regions.size() << " " << image.getRows() *image.getCols() << " "  <<
     // displayRandCol.getRows() *displayRandCol.getCols()<<std::endl;
@@ -1016,12 +1020,15 @@ void SlicAlgorithm(/*const char* datapath*/Mat<T> image, const SlicParameter &pa
     /*std::cout<<regions.size() << " " << image.getRows() *image.getCols() << " "  <<
  dffd.getRows() *dffd.getCols()<<std::endl;*/
     SLICAssignmentStep(image, superPixelCenter, regions, param);
+    std::cout<<"in slic"<<regions.size()<<std::endl;
+ for ( Region reg : regions ){
+    std::cout<<reg.getSizePix()<<std::endl;
 
+    }
     std::chrono::high_resolution_clock::time_point stop = std::chrono::high_resolution_clock::now();
     durationa = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
     std::cout << "duration A is :" << durationa.count();
 
-    composeSegRandCol(image, regions);
 }
 
 void testSlic();

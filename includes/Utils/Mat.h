@@ -77,7 +77,7 @@ public:
     void toBGRSpace();
     void toRGBSpace();
     void toGRAYSpace();
-    void toLabSpace(SlicParameter &conv_param);
+    void toLabSpace(const LabParam &conv_param);
     void toHsvSpace();
 
     // Operator //
@@ -1063,7 +1063,7 @@ static XYZRefT XYZrefs[] = {
 template <typename T>
 
 // void Mat<T>::toLabSpace(bool divbool, int div_str, int xyzref )
-void Mat<T>::toLabSpace(SlicParameter &conv_param)
+void Mat<T>::toLabSpace(const LabParam &conv_param)
 {
     if (channels < 3)
     {
@@ -1101,7 +1101,7 @@ void Mat<T>::toLabSpace(SlicParameter &conv_param)
 
                 // refvalues
                 // float tevaluate= 0.008856.f ;
-                // float a=7.787f ;
+                // float a=7.787f ;d
                 // float b= 16/116.f;
                 // Difference betwween the two thing
                 this->atChannelOp(j, i, 0) = static_cast<T>(116 * (functiontt(Y)) - 16); // X or Y + diffent formula

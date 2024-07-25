@@ -6,6 +6,9 @@ namespace appobj
     Canvas canvas;
     // Opengl Engine declared elsewhere
     OpenGLEngine glengine;
+    // Imgeditor Engine declared elsewhere
+    // IFdefine module rg
+    RGEngine rgengine;
 
 }
 
@@ -75,6 +78,19 @@ void OpenGLEngine::renderTexture()
 */
 // Opengl rendering of the current base texture to the fbo
 
+bool OpenGLEngine::outputText(Mat<uint8_t> &image, GLuint *out_texture)
+{
+
+    *out_texture = makeTextureMat<uint8_t, textuc>(0, image);
+    
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR)
+    {
+        std::cerr << "Error durings engine texture loading function: " << error << std::endl;
+    }
+    return 1;
+}
+
 // TOODO
 // Layer choice
 // Handling current vector states
@@ -89,13 +105,18 @@ bool OpenGLEngine::outputImg(const char *datapath, GLuint *out_texture, int *out
 
     // Simplify the call on the two line under
     Mat<uint8_t> tmpmat;
+
     // Load image in two texture and in the mat object
     // Second texture may have no purpose out in the current build
     initTextRess(imageress, read_texture<textuc>(0, datapath, tmpmat));
 
     initTextRess(copytext, makeTextureMat<uint8_t, textuc>(0, tmpmat));
 
-    Layer new_img(tmpmat);
+    *out_width = tmpmat.getCols();
+    *out_height = tmpmat.getRows();
+
+    Layer new_img(std::move(tmpmat));
+
     // Currently only deal with the layer 0
     if (appobj::canvas.getLayerNb() > 0)
     {
@@ -106,6 +127,7 @@ bool OpenGLEngine::outputImg(const char *datapath, GLuint *out_texture, int *out
         appobj::canvas.addLayer(new_img);
     }
 
+
     // TODO Canvas set up Should not be handled here
     // TODO, only init for the first texture in the vector
     // Implement mangament for multiple layers
@@ -115,10 +137,6 @@ bool OpenGLEngine::outputImg(const char *datapath, GLuint *out_texture, int *out
         fbo = createFBO(imageress);
     }
     // glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-    // TODO, not sure of those assignment
-    *out_width = tmpmat.getCols();
-    *out_height = tmpmat.getRows();
 
     // copyTextureToFBO(fbo,*out_width,*out_height );
     //  FBO texture
@@ -133,6 +151,7 @@ bool OpenGLEngine::outputImg(const char *datapath, GLuint *out_texture, int *out
     return 1;
 }
 
+// Render a full texture to the main texture
 void OpenGLEngine::copyTextureToFBO(GLuint &p_fbo, int width, int height)
 {
 
@@ -195,9 +214,9 @@ void OpenGLEngine::renderColchange(const Vec<GLfloat> &new_coord, const GLuint &
 }*/
 
 // TODO Look into the performance and overhead cost here
-void OpenGLEngine::renderColChange(std::vector<Vec<GLfloat>> &to_color, const Vec<GLfloat> &color, int width, int height,int pt_size)
+void OpenGLEngine::renderColChange(std::vector<Vec<GLfloat>> &to_color, const Vec<GLfloat> &color, int width, int height, int pt_size)
 {
-glEnable(GL_PROGRAM_POINT_SIZE);
+    glEnable(GL_PROGRAM_POINT_SIZE);
 
     BufferIDsGroups work_vao = createBuffers(to_color);
 
@@ -229,9 +248,8 @@ glEnable(GL_PROGRAM_POINT_SIZE);
     glBindVertexArray(work_vao.m_vao_id);
     prog.addUniform3("new_color", color);
     prog.addUniform1("text_height", height);
-    prog.addUniform1("text_width",width );
-    prog.addUniform1("pt_size",pt_size );
-
+    prog.addUniform1("text_width", width);
+    prog.addUniform1("pt_size", pt_size);
 
     // Directly use the size of the to color arrray sinnce no ebo were crearted for this
     // glDrawElements(GL_POINTS, to_color.size(), GL_UNSIGNED_INT, 0);
@@ -245,7 +263,7 @@ glEnable(GL_PROGRAM_POINT_SIZE);
 
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-glDisable(GL_PROGRAM_POINT_SIZE);
+    glDisable(GL_PROGRAM_POINT_SIZE);
 
     freeBuffers(work_vao);
     error = glGetError();
@@ -258,23 +276,6 @@ glDisable(GL_PROGRAM_POINT_SIZE);
 }
 
 // TODO delete thsi
-/*
-void OpenGLEngine::draw()
-{
-    glClear(GL_COLOR_BUFFER_BIT);
-    // TODO yknow
-    prog.reset();
-    prog.init("colorchange.vs", "colorchange.fs");
-    prog.use();
-    glBindVertexArray(loadedvao[activevao].getVao());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-    bindTexture(imageress[activetexture], prog.shader_id, "image_color");
-    glDrawElements(GL_TRIANGLES, loadedvao[activevao].m_count, GL_UNSIGNED_INT, 0);
-}
-
-
-*/
 
 // OLD TEst
 /*   GLint format;
