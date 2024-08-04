@@ -54,10 +54,30 @@ void ShowGenDisplayPanel(bool &show, GLuint &tex)
         ImGui::Image((ImTextureID)(intptr_t)tex, ImVec2(width, height), ImVec2(0, 1), ImVec2(1, 0));
     }
     ImVec2 parent_size = ImGui::GetWindowSize();
-    float button_size= 20.0f;
+    float button_size = 20.0f;
     ImGui::Dummy(ImVec2((parent_size.x * 0.5f) - button_size, 1.0f));
-    ImGui::Button("Save Result",ImVec2(button_size, 1.0f));
+    const char *save_text = "Save Result";
+    ImVec2 save_text_size = ImGui::CalcTextSize(save_text);
+    if (ImGui::Button(save_text, ImVec2(save_text_size.x + button_size, save_text_size.y + button_size)))
+    {
+        appobj::glengine.saveTextInst(tex, "Curretnlyreg");
+    };
     ImGui::SameLine();
+    ImGui::Spacing();
+    if (ImGui::Button("Reset", ImVec2(button_size, button_size)))
+    {
+        // TODO, weird thing happen i huess
+        appobj::glengine.deleteTexture(tex);
+        show = false;
+    };
+    ImGui::Spacing();
+    ImGui::SameLine();
+    const char *trans_text = "Transfer to Main";
+    ImVec2 trans_text_size = ImGui::CalcTextSize(trans_text);
 
+    if (ImGui::Button(trans_text, ImVec2(trans_text_size.x + button_size, trans_text_size.y + button_size)))
+    {
+        appobj::glengine.copyTextureToFBO(tex, width, height);
+    };
     ImGui::End();
 }

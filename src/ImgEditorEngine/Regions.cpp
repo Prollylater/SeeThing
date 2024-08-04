@@ -117,9 +117,6 @@ void Region::fuse(Region *fusedin)
 	fusedin->adjacentregions.shrink_to_fit();
 	fusedin->currentMeanIntensity = 0.0;
 
-	std::cout << fusedin->getSizePix() << std::endl;
-	std::cout << fusedin->getMeanIntensity() << std::endl;
-	std::cout << fusedin->getState() << std::endl;
 	// fusedin->adjacentregions.shrink_to_fit();
 }
 
@@ -187,13 +184,9 @@ void fuseRegions(std::vector<Region> &regions, float threshold)
 			if (reg->pixels.size() > 0 &&
 				isSimilarMeanAverage(regions[i], *reg, threshold))
 			{
-				std::cout << "Crash HEre6a" << std::endl;
-
 				regions[i].fuse(reg);
 
 				// newregionsbuffer.push_back(reg);
-
-				std::cout << "Crash HEre7Fa" << std::endl;
 			}
 		}
 	}

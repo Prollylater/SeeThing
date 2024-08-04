@@ -59,7 +59,6 @@ void ShowSlicParameter(bool &show, GLuint &tex)
                                    div);
         // TODO GEt active layver
         Mat<uint8_t> &activeim = appobj::canvas.getLayer(0).getImage();
-        std::cout << appobj::canvas.getLayerNb() << std::endl;
 
         std::cout << c_pix_k << std::endl;
         std::cout << compactness_m << std::endl;
@@ -135,7 +134,6 @@ void ShowSeedParameter(bool &show, GLuint &tex)
     };
     // TODO Put a disclaimer
 
-
     static ImGuiComboFlags flags = 0;
     /*
          ImGui::CheckboxFlags("ImGuiComboFlags_WidthFitPreview", &flags, ImGuiComboFlags_WidthFitPreview))
@@ -178,12 +176,11 @@ void ShowSeedParameter(bool &show, GLuint &tex)
     if (ImGui::Button("Execute"))
     {
         // DispatchpRegionGrowing
-            std::cout << "sdsd" << std::endl;
+        std::cout << "sdsd" << std::endl;
 
         SeedRGParameter executeparam(threshold, adapt_perc, seednb, funct_current_idx, random, divide, adaptive);
         // TODO GEt active layver
         Mat<uint8_t> &activeim = appobj::canvas.getLayer(0).getImage();
-        std::cout << appobj::canvas.getLayerNb() << std::endl;
 
         Mat<uint8_t>
             regiongrow = appobj::rgengine.dispatch(executeparam, activeim, coloration_current_idx);
@@ -231,8 +228,6 @@ void ShowSeedParameter(bool &show, GLuint &tex)
 void ShowRegionGrowingArea()
 {
     static GLuint display;
-    static int width;
-    static int height;
 
     bool show = win_states.isTrue(WinStates::rg_panel);
 
@@ -347,24 +342,11 @@ void ShowRegionGrowingArea()
             break;
         }
 
-        if (width * height != 0 && display != 0)
+        if (/*width * height != 0 &&*/ display != 0)
         {
             result_display = true;
-            ShowRegionGrowingPanel(result_display, display);
+            ShowGenDisplayPanel(result_display, display);
         }
     }
     ImGui::End();
-}
-
-void ShowRegionGrowingPanel(bool &show, GLuint &tex)
-{
-    if (!show)
-    {
-        return;
-    }
-    int width = appobj::canvas.getLayer(0).getWidth();
-    int height = appobj::canvas.getLayer(0).getHeight();
-
-    glBindTexture(GL_TEXTURE_2D, tex);
-    ImGui::Image((ImTextureID)(intptr_t)tex, ImVec2(width, height), ImVec2(0, 1), ImVec2(1, 0));
 }

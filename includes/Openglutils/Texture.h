@@ -22,6 +22,9 @@ void bindTexture(const TextureResource &texResource, const GLuint &program, cons
 void release(TextureResource &texResource);
 
 void freeTexture(TextureResource &texResource);
+void freeTexture(GLuint &texResource);
+
+
 
 enum class TextType
 {

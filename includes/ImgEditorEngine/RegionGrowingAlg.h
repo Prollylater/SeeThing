@@ -313,7 +313,6 @@ void regionGrowing3c(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>> &pix
     }
     while (!pixelQueue.empty())
     {
-        // std::cout<<"1"<<std::endl;
         std::shared_ptr<Pixl> currPixel = pixelQueue.front();
         pixelQueue.pop();
 
@@ -334,7 +333,6 @@ void regionGrowing3c(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>> &pix
                 // First visit of a pixel
                 if ((visited.atChannel(j, i, 0)) == valctrl)
                 {
-                    // std::cout<<"2"<<std::endl;
 
                     std::shared_ptr<Pixl> neighbor(new Pixl(i, j, currPixel->getId()));
                     bool similar = false;
@@ -353,7 +351,6 @@ void regionGrowing3c(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>> &pix
                     {
                         // Add the neighboring pixel to the region
 
-                        // std::cout<<"3"<<std::endl;
 
                         pixelQueue.push(neighbor);
 
@@ -364,7 +361,6 @@ void regionGrowing3c(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>> &pix
                 }
                 else
                 {
-                    // std::cout<<"4"<<std::endl;
 
                     // TODO Remnant from in Region growing fusion ?
                     // in if : && regions[static_cast<int>(visited.at<int>(i, j)) - 1].getSizePix() > 0)

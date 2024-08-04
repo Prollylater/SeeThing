@@ -12,4 +12,3 @@ void ShowSeedParameter(bool &show , GLuint& tex);
 
 void ShowRegionGrowingArea();
 
-void ShowRegionGrowingPanel(bool &show , GLuint& tex);

@@ -13,17 +13,17 @@ namespace appobj
 }
 
 OpenGLEngine::OpenGLEngine() //: activevao(0), activetexture(0)
-    {
-        // loadedvao.resize(1);
-        // imageress.resize(1);
-        //  Create a buffers for the first and  only vao in currrent version
+{
+    // loadedvao.resize(1);
+    // imageress.resize(1);
+    //  Create a buffers for the first and  only vao in currrent version
 
-        /*// Context initialization
-        if (!initImrender())
-         {
-             std::cerr << "Buffers Initialization failed" << std::endl;
-         }*/
-    };
+    /*// Context initialization
+    if (!initImrender())
+     {
+         std::cerr << "Buffers Initialization failed" << std::endl;
+     }*/
+};
 
 bool OpenGLEngine::initImrender()
 {
@@ -56,6 +56,98 @@ bool OpenGLEngine::initImrender()
 
     return true;
 }
+
+// TODO better management of canvas and current state to avoid this treatment
+//  Save an image 
+// Invoke when the image wasn't already stored in a canvas
+// Result of operation etc..
+bool OpenGLEngine::saveTextInst(GLuint& out_texture, const char* filename)
+{
+    GLint width, height, channels;
+    glBindTexture(GL_TEXTURE_2D, out_texture);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &channels);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+    // TODO Channles data not stored
+    int size = width * height * channels;
+    uint8_t *pixels = new uint8_t[size];
+
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+
+    //TODO GIve choice between mutiple format
+    writeImgPng(filename, pixels, true, width, height, channels);
+}
+
+// Create a texture using the passed image data
+bool OpenGLEngine::outputText(Mat<uint8_t> &image, GLuint *out_texture)
+{
+
+    *out_texture = makeTextureMat<uint8_t, textuc>(0, image);
+
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR)
+    {
+        std::cerr << "Error durings engine texture loading function: " << error << std::endl;
+    }
+    return 1;
+}
+
+// TOODO change names of the "output" functions
+// Layer choice
+// Handling current vector states
+// Lot of thing to modify
+// Load an image
+bool OpenGLEngine::outputImg(const char *datapath, GLuint *out_texture, int *out_width, int *out_height)
+{
+    // Will always add at the specified Layer
+    // Load image in main canvas, actually, should be Load to main canvas somewhere else -> Dispatch to some disparche engine
+    //->Dispatch to some other thing Thus Canvas don't need any
+    // TODO Canvas set up Should not be handled here
+
+    // Simplify the call on the two line under
+    Mat<uint8_t> tmpmat;
+
+    // Load image in two texture and in the mat object
+    // Second texture may have no purpose out in the current build
+    initTextRess(imageress, read_texture<textuc>(0, datapath, tmpmat));
+
+    *out_width = tmpmat.getCols();
+    *out_height = tmpmat.getRows();
+
+    Layer new_img(std::move(tmpmat));
+
+    // Currently only deal with the layer 0
+    if (appobj::canvas.getLayerNb() > 0)
+    {
+        appobj::canvas.addAtLayer(new_img, 0);
+    }
+    else
+    {
+        appobj::canvas.addLayer(new_img);
+    }
+
+    // TODO Canvas set up Should not be handled here
+    // TODO, only init for the first texture in the vector
+    // Implement mangament for multiple layers
+
+    if (fbo == 0)
+    { // Create a fbo for other renderings
+        fbo = createFBO(imageress);
+    }
+    // glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+    //  FBO texture
+    *out_texture = imageress.texture_id;
+    // NO rendering is necessary here
+
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR)
+    {
+        std::cerr << "Error durings engine texture loading function: " << error << std::endl;
+    }
+    return 1;
+}
+
 /*
 void OpenGLEngine::renderTexture()
 {
@@ -76,83 +168,16 @@ void OpenGLEngine::renderTexture()
     // Take care of each Ui components
 }
 */
-// Opengl rendering of the current base texture to the fbo
 
-bool OpenGLEngine::outputText(Mat<uint8_t> &image, GLuint *out_texture)
+bool OpenGLEngine::deleteTexture(GLuint &tex)
 {
-
-    *out_texture = makeTextureMat<uint8_t, textuc>(0, image);
-    
-    GLenum error = glGetError();
-    if (error != GL_NO_ERROR)
-    {
-        std::cerr << "Error durings engine texture loading function: " << error << std::endl;
-    }
-    return 1;
+    glBindTexture(GL_TEXTURE_2D, 0);
+    freeTexture(tex);
 }
 
-// TOODO
-// Layer choice
-// Handling current vector states
-// Lot of thing to modify
-// Load an image
-bool OpenGLEngine::outputImg(const char *datapath, GLuint *out_texture, int *out_width, int *out_height)
-{
-    // Will always add at the specified Layer
-    // Load image in main canvas, actually, should be Load to main canvas somewhere else -> Dispatch to some disparche engine
-    //->Dispatch to some other thing Thus Canvas don't need any
-    // TODO Canvas set up Should not be handled here
-
-    // Simplify the call on the two line under
-    Mat<uint8_t> tmpmat;
-
-    // Load image in two texture and in the mat object
-    // Second texture may have no purpose out in the current build
-    initTextRess(imageress, read_texture<textuc>(0, datapath, tmpmat));
-
-    initTextRess(copytext, makeTextureMat<uint8_t, textuc>(0, tmpmat));
-
-    *out_width = tmpmat.getCols();
-    *out_height = tmpmat.getRows();
-
-    Layer new_img(std::move(tmpmat));
-
-    // Currently only deal with the layer 0
-    if (appobj::canvas.getLayerNb() > 0)
-    {
-        appobj::canvas.addAtLayer(new_img, 0);
-    }
-    else
-    {
-        appobj::canvas.addLayer(new_img);
-    }
-
-
-    // TODO Canvas set up Should not be handled here
-    // TODO, only init for the first texture in the vector
-    // Implement mangament for multiple layers
-
-    if (fbo == 0)
-    { // Create a fbo for other renderings
-        fbo = createFBO(imageress);
-    }
-    // glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-    // copyTextureToFBO(fbo,*out_width,*out_height );
-    //  FBO texture
-    *out_texture = imageress.texture_id;
-    // NO rendering is necessary here
-
-    GLenum error = glGetError();
-    if (error != GL_NO_ERROR)
-    {
-        std::cerr << "Error durings engine texture loading function: " << error << std::endl;
-    }
-    return 1;
-}
-
-// Render a full texture to the main texture
-void OpenGLEngine::copyTextureToFBO(GLuint &p_fbo, int width, int height)
+// TODO, the change here is not transfered to the canvas
+//  Render a full texture to the main texture
+void OpenGLEngine::copyTextureToFBO(GLuint &tex, int width, int height)
 {
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -165,7 +190,7 @@ void OpenGLEngine::copyTextureToFBO(GLuint &p_fbo, int width, int height)
     prog.init("./ressources/shaders/imgoutput.vs", "./ressources/shaders/imgoutput.fs");
 
     prog.use();
-    glBindFramebuffer(GL_FRAMEBUFFER, p_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
     {
@@ -175,7 +200,11 @@ void OpenGLEngine::copyTextureToFBO(GLuint &p_fbo, int width, int height)
     }
     glBindVertexArray(loadedvao.m_vao_id);
 
-    bindTexture(copytext, prog.shader_id, "image_color");
+    //Create a temporary Ressource holder
+    TextureResource temp_tex_res;
+    initTextRess(temp_tex_res, tex);
+
+    bindTexture(temp_tex_res, prog.shader_id, "image_color");
     std::cout << "id" << prog.shader_id << std::endl;
     glDrawElements(GL_TRIANGLES, loadedvao.m_count, GL_UNSIGNED_INT, 0);
 
@@ -187,31 +216,9 @@ void OpenGLEngine::copyTextureToFBO(GLuint &p_fbo, int width, int height)
     {
         std::cerr << "Error durings engine update texture function: " << error << std::endl;
     }
-    // Take care of each Ui components
 }
 
 /////////////////////////////////////Dispatch
-
-// Rendering directly to FBO with colour change
-/*
-void OpenGLEngine::renderColchange(const Vec<GLfloat> &new_coord, const GLuint &textsize, const Vec<GLfloat> &color)
-{
-    glClear(GL_COLOR_BUFFER_BIT);
-    // TODO yknow
-    prog.reset();
-    prog.init("./ressources/shaders/colorchange.vs", "./ressources/shaders/colorchange.fs");
-    prog.use();
-    bindTexture(imageress, prog.shader_id, "image_color");
-    glBindVertexArray(loadedvao.getVao());
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-    glDrawElements(GL_TRIANGLES, loadedvao.m_count, GL_UNSIGNED_INT, 0);
-    prog.addUniform2("pixel_coord", new_coord);
-    prog.addUniform3("new_color", color);
-    prog.addUniform1("texture_size", textsize);
-
-    // Take care of each Ui components
-}*/
 
 // TODO Look into the performance and overhead cost here
 void OpenGLEngine::renderColChange(std::vector<Vec<GLfloat>> &to_color, const Vec<GLfloat> &color, int width, int height, int pt_size)
@@ -278,35 +285,6 @@ void OpenGLEngine::renderColChange(std::vector<Vec<GLfloat>> &to_color, const Ve
 // TODO delete thsi
 
 // OLD TEst
-/*   GLint format;
-glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &format);
-
-switch (format) {
-     case GL_RGB:
-     case GL_RGB8:
-         std::cout << "Texture format is RGB." << std::endl;
-         break;
-     case GL_RGBA:
-     case GL_RGBA8:
-         std::cout << "Texture format is RGBA." << std::endl;
-         break;
-     case GL_RGB16F:
-         std::cout << "Texture format is RGB16F (16-bit floating point RGB)." << std::endl;
-         break;
-     case GL_RGBA16F:
-         std::cout << "Texture format is RGBA16F (16-bit floating point RGBA)." << std::endl;
-         break;
-     case GL_RGB32F:
-         std::cout << "Texture format is RGB32F (32-bit floating point RGB)." << std::endl;
-         break;
-     case GL_RGBA32F:
-         std::cout << "Texture format is RGBA32F (32-bit floating point RGBA)." << std::endl;
-         break;
-     // Add more formats as needed
-     default:
-         std::cout << "Unknown or unsupported texture format." << std::endl;
-         break;
- }*/
 
 /*
 // Assuming 3 bytes per pixel for GL_RGB

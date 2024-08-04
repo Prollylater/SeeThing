@@ -66,13 +66,6 @@ Mat<uint8_t> composeSegMeanColor(const Mat<uint8_t> &src, std::vector<Region> &r
 Mat<uint8_t> composeSegRandCol(const Mat<uint8_t> &src, const std::vector<Region> &regions)
 {
     Mat<uint8_t> resultMat(src.getRows(), src.getCols(), 3, PixlColorSpace::RGB);
-    std::cout<<std::endl;
-   
-    std::cout<<src.getRows()<<std::endl;
-    std::cout<<src.getCols()<<std::endl;
-    std::cout<<src.getRows()<<std::endl;
-    std::cout<<std::endl;
-
     // Hypothesis: The same memory is reassigned for resultMat when function is called again in the same scope + some weird behavior i haven't determined
     // Better Fix: Simply zeros each new Matrix
     // Need more Test

@@ -36,3 +36,9 @@ void freeTexture(TextureResource &texResource)
     glDeleteSamplers(1, &texResource.sampler_id);
 }
 
+void freeTexture(GLuint &texResource)
+{
+    glDeleteTextures(1, &texResource);
+}
+
+

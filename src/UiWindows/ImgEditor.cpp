@@ -50,6 +50,7 @@ void ShowImageRenderingArea()
                 }
                 if (ImGui::MenuItem("Save"))
                 {
+                    appobj::glengine.saveTextInst(display, "Main");
                 }
                 if (ImGui::MenuItem("Save as"))
                 {

@@ -40,7 +40,7 @@ private:
     // FBO
     GLuint fbo;
     // Texture used to render to fbo without frame
-    TextureResource copytext;
+    // TextureResource copytext;
     // Store main Shader
     Program prog;
 
@@ -56,6 +56,8 @@ public:
     bool initImrender();
     bool outputImg(const char *datapath, GLuint *out_texture, int *out_width, int *out_height);
     bool outputText(Mat<uint8_t> &image, GLuint *out_texture);
+    bool deleteTexture(GLuint &tex);
+    bool saveTextInst(GLuint &out_texture, const char *filename);
 
     void renderTexture();
 
