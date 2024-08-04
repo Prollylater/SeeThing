@@ -10,53 +10,6 @@ int moduloc(int dividend, int divisor)
     }
     return dividend;
 }
- 
-// TODO  Change place
-//  Croissance de régons autour des germes(résultat plusieurs régions)
-//  Fusion de régions adjacentes semblablec=
-//  Load an image with some basic tratment applied
-/*
-Mat<T> imgTreat(std::string path, int treat)
-{
-    cv::Mat img = cv::imread(path, 1);
-
-    // Check for failure
-    if (img.empty())
-    {
-        std::cerr << "Could not find the image" << std::endl;
-        return cv::Mat::zeros(2, 2, CV_8UC3);
-    }
-
-    cv::Mat kernel;
-
-    cv::Mat convolved;
-
-    // convolution
-    if (img.getChannels() == 3 && treat == 3)
-    {
-        // Gaussian Blur
-        kernel = createMatNxN(3, 1.0 / 16, 2.0 / 16, 1.0 / 16, 2.0 / 16, 4.0 / 16, 2.0 / 16, 1.0 / 16, 2.0 / 16, 1.0 / 16);
-        convolved = applyFilterConv3C3(img, kernel);
-        return convolved;
-    }
-    else if (img.getChannels() == 3 && treat == 2)
-    {
-        medianBlurCustom(img, convolved);
-        return convolved;
-    }
-    else if (img.getChannels() == 1 && treat == 1)
-    {
-        // Mean blur
-        kernel = createMatNxN(3, 1.0 / 9, 1.0 / 9, 1.0 / 9, 1.0 / 9, 1.0 / 9, 1.0 / 9, 1.0 / 9, 1.0 / 9, 1.0 / 9);
-        convolved = applyFilterConv3(img, kernel);
-        return convolved;
-    }
-
-    return img;
-}
-*/
-
-
 
 // TODO compose Mat visited
 //  TODO refrain from passing the whole matrice and just int
@@ -79,6 +32,8 @@ Mat<uint8_t> composeSegMean(const Mat<uint8_t> &src, std::vector<Region> &region
             }
         }
     }
+    writeImgPng("./UEB1", resultMat, true);
+
     return resultMat;
 }
 
@@ -91,7 +46,7 @@ Mat<uint8_t> composeSegMeanColor(const Mat<uint8_t> &src, std::vector<Region> &r
     {
         if (region.getSizePix() > 0)
         {
-            Vec<uint8_t> regmeanclr = (region.computeColorIntensity(src)).convertDt<uint8_t>();
+            Vec<uint8_t> regmeanclr = (region.computeColorIntensity(src));
 
             for (std::shared_ptr<Pixl> &pixelptr : region.pixels)
             {
@@ -101,6 +56,8 @@ Mat<uint8_t> composeSegMeanColor(const Mat<uint8_t> &src, std::vector<Region> &r
             }
         }
     }
+    writeImgPng("./UEB3", resultMat, true);
+
     return resultMat;
 }
 //TODO REmove the write here
@@ -145,7 +102,6 @@ Mat<uint8_t> composeSegRandCol(const Mat<uint8_t> &src, const std::vector<Region
     int b = src.getCols();
     int c = src.getRows();
 
-    writeImgPng("./UEB", resultMat, true);
 
     for (const Region &region : regions)
     {
@@ -180,98 +136,6 @@ Mat<uint8_t> composeDisplayEdge(Mat<uint8_t> &visited, std::vector<Region> &regi
     return resultMat;
 }
 
-/*
-int testregiongrowing(int argc, char **argv)
-{
-    int i;
-
-    // Paramètres
-    int seedquant = 100;
-    float threshold = 5;
-    // lecture des arguments
-
-    const char *filepath = "0.jpg";
-
-    Mat<u_char> img = loadImg(filepath, true);
-    Mat<u_char> imgb = loadImg(filepath, true);
-
-    std::vector<Region> regions;
-    std::vector<Region> regionsb;
-
-    std::queue<std::shared_ptr<Pixl>> seedlist = putGermsDivide(img, regions, 10);
-
-    std::cout<<seedlist.size() <<"seedlist" << std::endl;
-    std::queue<std::shared_ptr<Pixl>> seedlistb = putGermsDivide(imgb, regionsb, 10);
-
-    // Mat that will be holding the different
-    Mat<uint32_t> visited(img.getRows(), img.getCols(), 1);
-    Mat<uint32_t> visitedb(img.getRows(), img.getCols(), 1);
-    ;
-    std::chrono::milliseconds durationa;
-    std::chrono::milliseconds durationb;
-
-    if (img.getChannels() == 3)
-    {
-
-        std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
-
-        std::cout << "growing A " << std::endl;
-
-        regionGrowing3c(img, seedlist, threshold, visited, regions);
-        std::cout << "growing A done" << std::endl;
-        fuseRegions(regions, threshold);
-        std::chrono::high_resolution_clock::time_point stop = std::chrono::high_resolution_clock::now();
-
-        durationa = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-        /*fuseRegions(regions, threshold );
-
-        start = std::chrono::high_resolution_clock::now();
-        // Sharpened
-        regionGrowing3c(imgb, seedlistb, threshold, visitedb, regionsb);
-
-
-        fuseRegions(regionsb, threshold);
-        fuseRegions(regionsb, threshold);
-
-        stop = std::chrono::high_resolution_clock::now();
-        durationb = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-    }
-    else if (img.getChannels() == 1)
-    {
-
-        regionGrowing1c(img, seedlist, threshold, visited, regions);
-    }
-
-    int taillerega = 0;
-    for (int i = 0; i < regions.size(); i++) {
-        //std::cout << regions[i].getSizePix() << "regions a with is first being " <<std::endl;
-
-        // std::cout<<regions[i].pixels[0] -> getId() << regions[i].getMeanIntensity()<< std::endl;
-        taillerega += regions[i].getSizePix();
-    }
-    int tailleregb = 0;
-    for (int i = 0; i < regionsb.size(); i++) {
-        //    std::cout << regionsb[i].getSizePix() << "regions b" << std::endl;
-        tailleregb += regionsb[i].getSizePix();
-    }
-    float percentSegmenteda = taillerega * 100 / (img.getRows() * img.getCols());
-    float percentSegmentedb = tailleregb * 100 / (imgb.getRows() * imgb.getCols());
-
-    std::cout << percentSegmenteda << " de l'image à été segementé en " << durationa.count() << " millisecondes" << std::endl;
-    std::cout << percentSegmentedb << " de la version de l'image à été segementé en " << durationb.count() << " millisecondes" << std::endl;
-
-    // 1 tableau de thread
-
-    Mat<uint8_t> display = composeSegMean(img, regions);
-
-    Mat<uint8_t> displayRandCol = composeSegRandCol(img, regions);
-
-    writeImgPng("./First", display, true);
-    writeImgPng("./secon", displayRandCol, true);
-
-}
-*/
-#include <array>
 // Test the best choice for Region Growing paramter
 /*
 void pipelineTest(std::string datapath)

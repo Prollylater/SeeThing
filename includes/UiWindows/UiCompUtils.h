@@ -15,13 +15,9 @@
 
 
 void ShowColorPicker(bool &show, ImVec4 &color);
+void ShowGenDisplayPanel(bool &show, GLuint &tex);
 
 void SetupImGuiFonts();
-
-
-//TODO, Not the best position yet again
-void SetupGlEngine();
-
 
 
 #endif

@@ -207,10 +207,10 @@ public:
     Vec<T> atVec(int row, int col);
     const Vec<T> atVec(int row, int col) const;
 
-    ~Mat()
+    ~Mat() = default;/*
     {
         delete[] data;
-    }
+    }*/
 };
 
 // Merge a Matimg object splitted according to it's number of channels
@@ -306,13 +306,6 @@ Mat<T>::Mat(Mat<T> &&otherMat) noexcept
 template <typename T>
 void Mat<T>::zeros()
 {
-    // TOTRY Benchmark this
-    /*for (int i = 0; i < rows * cols * channels; ++i)
-    {
-        // Default constructor of each value
-        data[i] = T();
-    }
-    */
     std::fill(data, data + rows * cols * channels, T{});
 }
 

@@ -8,7 +8,6 @@
 
 void ShowSlicParameter(bool &show , GLuint& tex );
 
-
 void ShowSeedParameter(bool &show , GLuint& tex);
 
 void ShowRegionGrowingArea();

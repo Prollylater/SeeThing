@@ -1,8 +1,11 @@
 #ifndef RG_GRW_H
 #define RG_GRW_H
+#include <queue>
 #include "Regions.h"
 #include "Imloader.h"
 #include "StructParam.h"
+
+#include <random>
 
 // TODO, Check which template are really useful
 
@@ -24,26 +27,36 @@ std::shared_ptr<Pixl> putGerm(const Mat<T> &img, int x, int y, std::vector<Regio
 }
 
 // Pose des germes aléatoire
+// TODO Also, put a guard in the app
 template <typename T>
 std::queue<std::shared_ptr<Pixl>> putGerms(const Mat<T> &img, std::vector<Region> &regions, int germsquant)
 {
+    regions.clear();
+    regions.shrink_to_fit();
+
+    if (germsquant > (img.getRows() * img.getCols()))
+    {
+        // Or return
+        germsquant = (img.getRows() * img.getCols()) - 1;
+        std::cout << "Number of seed too big for current image" << std::endl;
+    }
     std::random_device rand_dev;
     std::mt19937 generator(rand_dev());
 
-    std::uniform_int_distribution<int> distr(0, img.getRows() - 1);
-    std::uniform_int_distribution<int> distar(0, img.getCols() - 1);
+    std::uniform_int_distribution<int> dist_rows(0, img.getRows() - 1);
+    std::uniform_int_distribution<int> dist_cols(0, img.getCols() - 1);
 
     std::queue<std::shared_ptr<Pixl>> seedlist; // Stores the seeds
     for (int i = 0; i < germsquant; i++)
     {
         regions.push_back(Region());
     }
-
     for (int i = 0; i < germsquant; i++)
     {
-        int x = distr(generator); // generate a random number for x
-        int y = distar(generator);
+        int x = dist_cols(generator); // generate a random number for x
+        int y = dist_rows(generator);
         std::shared_ptr<Pixl> pix(new Pixl(x, y, i));
+
         seedlist.push(pix);
         regions[i].addGerm(pix, img);
     }
@@ -57,24 +70,29 @@ std::queue<std::shared_ptr<Pixl>> putGerms(const Mat<T> &img, std::vector<Region
 template <typename T>
 std::queue<std::shared_ptr<Pixl>> putGermsDivide(const Mat<T> &img, std::vector<Region> &regions, int n)
 {
+    regions.clear();
+    regions.shrink_to_fit();
+
     std::srand(static_cast<unsigned int>(std::time(0)));
 
     // Get a number of germ through the commandline
     std::queue<std::shared_ptr<Pixl>> seedlist; // Stores the seeds
     int index = 0;
     int germquant = n * n;
-
     // Divide in n part on each side
     int partheight = img.getRows() / n;
     int partwidth = img.getCols() / n;
-    // allocate as much region as there is seed
 
     if (partheight == 0 || partwidth == 0)
     { // partwidth  a des résultats intèressants
+        // Set the part size to a prechosen value
         partheight = 4;
         partwidth = 4;
+        // Since partsize don't depend of germquant there, germquant must depend from partsize
         germquant = (img.getRows() * img.getCols()) / (partheight * partwidth);
     }
+
+    // allocate as much region as there is seed
 
     for (int i = 0; i < germquant; ++i)
     {
@@ -194,16 +212,32 @@ Mat<T> imgTreat(std::string path, int treat)
     return img;
 }
 */
-// TODO Consider the row major order
-// TODO Visited might as well should be initalized here
+//
+// Seeded region growing
+//
+constexpr int RG_FUNCT_NB = 4;
+static rgsCompFuncVar rgs_comp_func_var[RG_FUNCT_NB] = {
+    isSimilarIntensity3c, isSimilarIntensity3cGlobal,
+    isSimilarLuminance3cGlobal, isSimilarEucDist};
+
+// TODO Visited might as well  be initalized here
 // Execute eRegionGrowing algorithm with 1c SImilarity function
 template <typename T>
 void regionGrowing1c(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>> &pixelQueue,
-                     const float threshold, Mat<uint32_t> &visited, std::vector<Region> &regions)
+                     const float threshold, Mat<uint32_t> &visited, std::vector<Region> &regions, int compfunc = 0)
 {
     visited.setTo(std::numeric_limits<uint32_t>::max());
     uint32_t valctrl = std::numeric_limits<uint32_t>::max();
 
+    rgsCompFuncVar exec_funct;
+    if (compfunc < RG_FUNCT_NB)
+    {
+        exec_funct = rgs_comp_func_var[compfunc];
+    }
+    else
+    {
+        exec_funct = rgs_comp_func_var[0];
+    }
     while (!pixelQueue.empty())
     {
         std::shared_ptr<Pixl> currPixel = pixelQueue.front();
@@ -224,7 +258,20 @@ void regionGrowing1c(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>> &pix
                 if ((visited.atChannel(j, i, 0)) == valctrl)
                 {
                     std::shared_ptr<Pixl> neighbor(new Pixl(i, j, currPixel->getId()));
-                    if (isSimilarIntensity1c(image, currPixel, (neighbor), threshold))
+                    bool similar = false;
+                    // TODO Push this part to a  comparison function
+                    // Can finally use iinitialization inside if properly
+                    if (auto funct = std::get_if<CompPixPix>(&exec_funct))
+                    {
+                        similar = (*funct)(image, currPixel, (neighbor), threshold);
+                    }
+                    if (auto funct = std::get_if<CompPixRegions>(&exec_funct))
+                    {
+                        similar = (*funct)(image, regions[currPixel->getId()], neighbor, threshold);
+                    }
+                    if (similar
+                        // isSimilarIntensity1c(image, currPixel, (neighbor), threshold)
+                    )
                     {
                         pixelQueue.push(neighbor);
                         // Add the neighboring pixel to the region
@@ -235,8 +282,6 @@ void regionGrowing1c(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>> &pix
                 // Pixel already visited, we decide if we want to add him as neighbor
                 else
                 {
-                    // TODO Remnant from in Region growing fusion ?
-                    // regions[static_cast<int>(visited.at<int>(i, j)) - 1].getSizePix() > 0)
                     if ((visited.atChannel(j, i, 0) != visited.atChannel(currPixel->y, currPixel->x, 0)))
                     {
                         unsigned int regionid = visited.atChannel(j, i, 0);
@@ -250,16 +295,22 @@ void regionGrowing1c(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>> &pix
     }
 }
 
-// TODO Consider the row major order
-// TODO Visited might as well should be initalized here
 // Execute eRegionGrowing algorithm with 3c SImilarity function
 template <typename T>
 void regionGrowing3c(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>> &pixelQueue,
-                     const float threshold, Mat<uint32_t> &visited, std::vector<Region> &regions)
+                     const float threshold, Mat<uint32_t> &visited, std::vector<Region> &regions, int compfunc = 0)
 {
     visited.setTo(std::numeric_limits<uint32_t>::max());
     uint32_t valctrl = std::numeric_limits<uint32_t>::max();
-    int a = 0;
+    rgsCompFuncVar exec_funct;
+    if (compfunc < RG_FUNCT_NB)
+    {
+        exec_funct = rgs_comp_func_var[compfunc];
+    }
+    else
+    {
+        exec_funct = rgs_comp_func_var[0];
+    }
     while (!pixelQueue.empty())
     {
         // std::cout<<"1"<<std::endl;
@@ -286,12 +337,19 @@ void regionGrowing3c(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>> &pix
                     // std::cout<<"2"<<std::endl;
 
                     std::shared_ptr<Pixl> neighbor(new Pixl(i, j, currPixel->getId()));
-                    if (
+                    bool similar = false;
+                    // Resolve correct comparison function
+                    // Can finally use iinitialization inside if properly
+                    if (auto funct = std::get_if<CompPixPix>(&exec_funct))
 
-                        isSimilarIntensity3c(image, currPixel, (neighbor), threshold)
-                        // isSimidlarLuminance3cGlobal(image, regions[currPixel->getId()], (neighbor), threshold)
-                        // isSimilarIntensity3cGlobal(image, regions[currPixel->getId()], (neighbor), threshold)
-                    )
+                    {
+                        similar = (*funct)(image, currPixel, (neighbor), threshold);
+                    }
+                    if (auto funct = std::get_if<CompPixRegions>(&exec_funct))
+                    {
+                        similar = (*funct)(image, regions[currPixel->getId()], neighbor, threshold);
+                    }
+                    if (similar)
                     {
                         // Add the neighboring pixel to the region
 
@@ -378,6 +436,7 @@ bool similarityFunction(const Mat<T> &image, std::shared_ptr<Pixl> currentPixel,
     // return isSimidlarLuminance3cGlobal(image, regions[currentPixel->getId()], neighbor, threshold);
 };
 
+// TODO, add proper mangament of the functions
 template <typename T>
 void adaptiveRegionGrowing(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>> &pixelQueue,
                            const float threshold, Mat<unsigned int> &visited, std::vector<Region> &regions, int adaptative)
@@ -458,210 +517,11 @@ Mat<uint8_t> composeSegMeanColor(const Mat<uint8_t> &src, std::vector<Region> &r
 Mat<unsigned char> composeSegRandCol(const Mat<uint8_t> &src, const std::vector<Region> &regions);
 Mat<uint8_t> composeDisplayEdge(Mat<uint8_t> &visited, std::vector<Region> &regions);
 
-/*
-int testregiongrowing(int argc, char **argv)
-{
-    int i;
-
-    // Paramètres
-    int seedquant = 100;
-    float threshold = 5;
-    // lecture des arguments
-
-    const char *filepath = "0.jpg";
-
-    Mat<u_char> img = loadImg(filepath, true);
-    Mat<u_char> imgb = loadImg(filepath, true);
-
-    std::vector<Region> regions;
-    std::vector<Region> regionsb;
-
-    std::queue<std::shared_ptr<Pixl>> seedlist = putGermsDivide(img, regions, 10);
-
-    std::cout<<seedlist.size() <<"seedlist" << std::endl;
-    std::queue<std::shared_ptr<Pixl>> seedlistb = putGermsDivide(imgb, regionsb, 10);
-
-    // Mat that will be holding the different
-    Mat<uint32_t> visited(img.getRows(), img.getCols(), 1);
-    Mat<uint32_t> visitedb(img.getRows(), img.getCols(), 1);
-    ;
-    std::chrono::milliseconds durationa;
-    std::chrono::milliseconds durationb;
-
-    if (img.getChannels() == 3)
-    {
-
-        std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
-
-        std::cout << "growing A " << std::endl;
-
-        regionGrowing3c(img, seedlist, threshold, visited, regions);
-        std::cout << "growing A done" << std::endl;
-        fuseRegions(regions, threshold);
-        std::chrono::high_resolution_clock::time_point stop = std::chrono::high_resolution_clock::now();
-
-        durationa = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-        /*fuseRegions(regions, threshold );
-
-        start = std::chrono::high_resolution_clock::now();
-        // Sharpened
-        regionGrowing3c(imgb, seedlistb, threshold, visitedb, regionsb);
-
-
-        fuseRegions(regionsb, threshold);
-        fuseRegions(regionsb, threshold);
-
-        stop = std::chrono::high_resolution_clock::now();
-        durationb = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-    }
-    else if (img.getChannels() == 1)
-    {
-
-        regionGrowing1c(img, seedlist, threshold, visited, regions);
-    }
-
-    int taillerega = 0;
-    for (int i = 0; i < regions.size(); i++) {
-        //std::cout << regions[i].getSizePix() << "regions a with is first being " <<std::endl;
-
-        // std::cout<<regions[i].pixels[0] -> getId() << regions[i].getMeanIntensity()<< std::endl;
-        taillerega += regions[i].getSizePix();
-    }
-    int tailleregb = 0;
-    for (int i = 0; i < regionsb.size(); i++) {
-        //    std::cout << regionsb[i].getSizePix() << "regions b" << std::endl;
-        tailleregb += regionsb[i].getSizePix();
-    }
-    float percentSegmenteda = taillerega * 100 / (img.getRows() * img.getCols());
-    float percentSegmentedb = tailleregb * 100 / (imgb.getRows() * imgb.getCols());
-
-    std::cout << percentSegmenteda << " de l'image à été segementé en " << durationa.count() << " millisecondes" << std::endl;
-    std::cout << percentSegmentedb << " de la version de l'image à été segementé en " << durationb.count() << " millisecondes" << std::endl;
-
-    // 1 tableau de thread
-
-    Mat<uint8_t> display = composeSegMean(img, regions);
-
-    Mat<uint8_t> displayRandCol = composeSegRandCol(img, regions);
-
-    writeImgPng("./First", display, true);
-    writeImgPng("./secon", displayRandCol, true);
-
-}
-*/
 #include <array>
 // Test the best choice for Region Growing paramter
 /*
 void pipelineTest(std::string datapath)
-{
-// Seed number equal image division squared
-// Threshold
-    // Tested Parameters
-    std::array<int, 4> imgdivide{{5, 10, 100, 1000}};
-    std::array<int, 5> thresholdarr{{1, 4, 9, 15, 30}};
-    std::array<int, 3> treatmentarray{{0, 2, 3}};
-    std::array<int, 3> adaptativenumarrray{{0, 50, 100}};
-
-    int resultsholdersize = imgdivide.size() * treatmentarray.size() * thresholdarr.size();
-    std::vector<int> imgdivideindex;
-    std::vector<int> treatmentindex;
-    std::vector<int> thresholdindex;
-    std::vector<int> adaptnum;
-    std::vector<std::chrono::milliseconds> timeresult;
-    std::vector<int> percentageresult;
-    std::vector<float> scoreresult;
-    int az = 0;
-    //
-    for (int i : treatmentarray)
-    {
-        cv::Mat img = imgTreat(datapath, i);
-        for (int j : imgdivide)
-        {
-            for (int k : thresholdarr)
-            {
-                for (int l : adaptativenumarrray)
-                {
-                    std::vector<Region> regions;
-                    std::queue<std::shared_ptr<Pixl>> seedlist = putGermsDivide(img, regions, j);
-
-                    az++;
-                    cv::Mat visited;
-                    std::chrono::milliseconds duration;
-
-                    std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
-                    visited = cv::Mat::zeros(img.getRows(), img.getCols(), CV_32SC3);
-                    adaptiveRegionGrowing(img, seedlist, k, visited, regions, l);
-                    fuseRegions(regions, k);
-                    fuseRegions(regions, k * 4);
-                    fuseRegions(regions, k);
-
-                    std::chrono::high_resolution_clock::time_point stop = std::chrono::high_resolution_clock::now();
-                    duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-
-                    std::cout << "Reelmex" << az << std::endl;
-
-                    //
-                    int taillereg = 0;
-                    for (int i = 0; i < regions.size(); i++)
-                    {
-                        //    std::cout << regionsb[i].getSizePix() << "regions b" << std::endl;
-                        taillereg += regions[i].getSizePix();
-                    }
-                    //  std::cout<<"Element" << az <<std::endl;
-
-                    float percentSegmented = taillereg * 100 / (img.getRows() * img.getCols());
-
-                    std::cout << percentSegmented << std::endl;
-
-                    // Adding metrics and sotring parameter for this iteration
-
-                    if (percentSegmented > 70)
-                    {
-                        std::cout << "write";
-                        imgdivideindex.push_back(j);
-                        treatmentindex.push_back(i);
-                        thresholdindex.push_back(k);
-                        adaptnum.push_back(l);
-                        timeresult.push_back(duration);
-                        percentageresult.push_back(percentSegmented);
-
-                        // FInal segmentation output
-                        cv::Mat segmentedmean = composeSegMean(visited, regions);
-                        cv::Mat segmentedrandcol = composeSegRandCol(visited, regions);
-                        // cv::Mat f = composeSegMeanColor(visited, regions); weird element inside
-
-                        std::string combinedString;
-                        combinedString += datapath;
-                        combinedString += " Treat:" + std::to_string(i);
-                        combinedString += " Divs:" + std::to_string(j);
-                        combinedString += " Tol:" + std::to_string(k);
-                        combinedString += " Adapt:" + std::to_string(l);
-                        combinedString += " Timems:" + std::to_string(duration.count());
-                        combinedString += " %:" + std::to_string(percentSegmented);
-                        std::string mean = " Mean:";
-                        std::string randcol = " RandCOl:";
-
-                        cv::imwrite(combinedString + mean + ".jpg", segmentedmean);
-                        cv::imwrite(combinedString + randcol + ".jpg", segmentedrandcol);
-                    }
-
-                    // scoring(img, visited);
-                    // scoreresult.push_back(percentSegmented);
-                }
-            }
-        }
-        // Trate
-        //    cv::imwrite( std::to_string(i) + ".jpg"  , img);
-    }
-
-    std::cout << "FInished" << az;
-}
-*/
-/*
-void scoring(const cv::Mat &image, std::queue<std::shared_ptr<Pixl>> &pixelQueue,
-             const float threshold, cv::Mat &visited)
-{
-}
+{}
 */
 
 // TODO choose to Store labspace or keep it as of right now
@@ -875,6 +735,7 @@ bool CheckSpatialConnectivitySlic(const Mat<T> &image, float id, int x, int y, i
 */
 
 // TODO Enforce spatial connectivity
+// Replace std::map and pair ?
 template <typename T>
 void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> &supapixllist, std::vector<Region> &regions, const SlicParameter &param)
 {
@@ -995,43 +856,30 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
 }
 
 template <typename T>
-void SlicAlgorithm(/*const char* datapath*/ std::vector<Region>& regions,const Mat<T>& image, const SlicParameter &param)
+void SlicAlgorithm(/*const char* datapath*/ std::vector<Region> &regions, const Mat<T> &image, const SlicParameter &param)
 {
-    // Load the image
-    // Mat<T> image = loadImg(datapath, true);
+    // Clean the regions variable
+    regions.clear();
+    regions.shrink_to_fit();
 
-    // Load the region tha will hold the segmentation result
     std::vector<std::shared_ptr<Pixl>> superPixelCenter = selectSuperpixelCenter(image, regions, param.m_K);
     std::chrono::milliseconds durationa;
-    std::cout<<"in slic"<<regions.size()<<std::endl;
 
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
-    moveCenterGradBased(image, superPixelCenter,param.m_labparam);
-    for ( Region reg : regions ){
-    std::cout<<reg.getSizePix()<<std::endl;
+    moveCenterGradBased(image, superPixelCenter, param.m_labparam);
 
-    }
-    composeSegRandCol(image, regions);
-   
-    // writeImgPng("./Firs", displayRandCol, true);
     // std::cout<<regions.size() << " " << image.getRows() *image.getCols() << " "  <<
     // displayRandCol.getRows() *displayRandCol.getCols()<<std::endl;
 
     /*std::cout<<regions.size() << " " << image.getRows() *image.getCols() << " "  <<
  dffd.getRows() *dffd.getCols()<<std::endl;*/
     SLICAssignmentStep(image, superPixelCenter, regions, param);
-    std::cout<<"in slic"<<regions.size()<<std::endl;
- for ( Region reg : regions ){
-    std::cout<<reg.getSizePix()<<std::endl;
 
-    }
     std::chrono::high_resolution_clock::time_point stop = std::chrono::high_resolution_clock::now();
     durationa = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-    std::cout << "duration A is :" << durationa.count();
-
+    std::cout << "duration of SLIC operation is :" << durationa.count();
 }
 
 void testSlic();
-
 
 #endif

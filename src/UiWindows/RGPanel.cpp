@@ -1,6 +1,8 @@
 #include "RGPanel.h"
-// TODO USe active texture
 
+// TODO replace all variables by constant use of their respecitve struct param
+
+// TODO Add usage of active texture and layer concept
 // TODO Put description where it's necessary
 void ShowSlicParameter(bool &show, GLuint &tex)
 {
@@ -64,10 +66,10 @@ void ShowSlicParameter(bool &show, GLuint &tex)
         std::cout << lah_div_str << std::endl;
         std::cout << div << std::endl;
 
-         Mat<uint8_t>
+        Mat<uint8_t>
             regiongrow = appobj::rgengine.dispatch(executeparam, activeim, coloration_current_idx);
         // TODO Dispatch should take care of this ?
-         appobj::glengine.outputText(regiongrow, &tex);
+        appobj::glengine.outputText(regiongrow, &tex);
 
         // DispatchpRegionGrowing
     };
@@ -109,16 +111,30 @@ void ShowSeedParameter(bool &show, GLuint &tex)
     // TODO Provide description POpup of each parameter
     // TODO Execute RegionGrowing Global or with selection
     static bool random = true;
-    static float f1, f2, f3;
+    static bool divide = false;
+    static bool adaptive = false;
+
+    static int seednb = 1;
+    static float threshold = 0.f;
+    static float adapt_perc = 0.f;
+
+    static int coloration_current_idx = 0;
 
     if (!show)
     {
         return;
     }
-    ImGui::Checkbox("Randomize Seeding", &random);
 
-    ImGui::SliderFloat("SeededRegParam1", &f1, 0.0f, 1.0f);
-    ImGui::SliderFloat("SeededRegParam2", &f2, 0.0f, 1.0f);
+    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.4f, 1.0f), "Seed selection parameters");
+    ImGui::SliderInt("Seed quantities", &seednb, 1, 5000);
+    ImGui::Checkbox("Randomize Seeding", &random);
+    ImGui::SameLine();
+    if (ImGui::Checkbox("Screen division seeding", &divide))
+    {
+        random = true;
+    };
+    // TODO Put a disclaimer
+
 
     static ImGuiComboFlags flags = 0;
     /*
@@ -126,19 +142,20 @@ void ShowSeedParameter(bool &show, GLuint &tex)
          flags &= ~ImGuiComboFlags_NoPreview;
 
  */
-
-    const char *items[] = {"AAAA", "BBBB", "CCCC", "DDDD", "EEEE"};
-    static int item_current_idx = 0;
-    const char *combo_preview_value = items[item_current_idx];
+    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.4f, 1.0f), "Comparison Algorithm");
+    const char *comp_func[] = {"Seed's color Intensity", "Seed's Euclidian distance",
+                               "Region's color intensity", "Region's luminance"};
+    static int funct_current_idx = 0;
+    const char *combo_preview_value = comp_func[funct_current_idx];
 
     if (ImGui::BeginCombo("Region Comparison Alg", combo_preview_value, flags))
     {
-        for (int n = 0; n < IM_ARRAYSIZE(items); n++)
+        for (int n = 0; n < IM_ARRAYSIZE(comp_func); n++)
         {
-            const bool is_selected = (item_current_idx == n);
-            if (ImGui::Selectable(items[n], is_selected))
+            const bool is_selected = (funct_current_idx == n);
+            if (ImGui::Selectable(comp_func[n], is_selected))
             {
-                item_current_idx = n;
+                funct_current_idx = n;
             }
 
             // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
@@ -149,28 +166,68 @@ void ShowSeedParameter(bool &show, GLuint &tex)
         }
         ImGui::EndCombo();
     }
+    if (ImGui::Checkbox("Adapative RG mode", &adaptive))
+    {
+        ImGui::SliderFloat("Adaptive Percentage", &adapt_perc, 0.0f, 100.0f);
+    };
+
+    ImGui::SliderFloat("Comparison Threshold", &threshold, 0.0f, 50.0f);
 
     // Dispatch the Result
 
     if (ImGui::Button("Execute"))
     {
         // DispatchpRegionGrowing
+            std::cout << "sdsd" << std::endl;
+
+        SeedRGParameter executeparam(threshold, adapt_perc, seednb, funct_current_idx, random, divide, adaptive);
+        // TODO GEt active layver
+        Mat<uint8_t> &activeim = appobj::canvas.getLayer(0).getImage();
+        std::cout << appobj::canvas.getLayerNb() << std::endl;
+
+        Mat<uint8_t>
+            regiongrow = appobj::rgengine.dispatch(executeparam, activeim, coloration_current_idx);
+        // TODO Dispatch should take care of this ?
+        appobj::glengine.outputText(regiongrow, &tex);
     };
     ImGui::SameLine();
-    if (ImGui::Button("Reset"))
+    if (ImGui::Button("Default Param"))
     {
         // DispatchpRegionGrowing
+        adapt_perc = 50.0f;
+        threshold = 15.0f;
     };
     ImGui::SameLine();
     if (ImGui::Button("Test Optimal\n Parameter"))
     {
         // Dispatchpipeline
     };
+
+    const char *coloration[] = {"Random color", "Average color", "Mean value color"};
+    const char *combo_preview_coloration = coloration[coloration_current_idx];
+
+    if (ImGui::BeginCombo("Output Coloration Values", combo_preview_coloration, ImGuiComboFlags_WidthFitPreview))
+    {
+        for (int n = 0; n < IM_ARRAYSIZE(coloration); n++)
+        {
+            const bool is_selected = (coloration_current_idx == n);
+            if (ImGui::Selectable(coloration[n], is_selected))
+            {
+                coloration_current_idx = n;
+            }
+
+            // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+            if (is_selected)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
 }
 
-
-//Result display may need better check or tto be removed
-// TODO The boolean system fro selection is weird
+// Result display may need better check or tto be removed
+//  TODO The boolean system fro selection is weird
 void ShowRegionGrowingArea()
 {
     static GLuint display;
@@ -291,7 +348,8 @@ void ShowRegionGrowingArea()
         }
 
         if (width * height != 0 && display != 0)
-        {   result_display = true;
+        {
+            result_display = true;
             ShowRegionGrowingPanel(result_display, display);
         }
     }

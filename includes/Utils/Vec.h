@@ -39,7 +39,7 @@ struct Vec
   };
 
   // Destructor
-  ~Vec() {}
+  ~Vec() =default;
 
   // Move constructor
   Vec(Vec &&other) noexcept : x(std::move(other.x)), y(std::move(other.y)), z(std::move(other.z))

@@ -2,7 +2,8 @@
 #ifndef APP_STATES_H
 #define APP_STATES_H
 #include <unordered_map>
-
+//TODO DEal with the dependencies resolve
+//TODO Too many thing to handle Find a better way if possible
 
 
 class WinStatesHandler;

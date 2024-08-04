@@ -40,11 +40,24 @@ void SetupImGuiFonts()
     io.Fonts->Build();
 }
 
-/*
-void SetupGlEngine()
+void ShowGenDisplayPanel(bool &show, GLuint &tex)
 {
-    if (!appobj::glengine.initImrender())
+    if (!show)
     {
-        std::cerr << "Buffers Initialization failed" << std::endl;
+        return;
     }
-}*/
+    int width = appobj::canvas.getLayer(0).getWidth();
+    int height = appobj::canvas.getLayer(0).getHeight();
+    if (ImGui::Begin("Segmentation Mode", &show))
+    {
+        glBindTexture(GL_TEXTURE_2D, tex);
+        ImGui::Image((ImTextureID)(intptr_t)tex, ImVec2(width, height), ImVec2(0, 1), ImVec2(1, 0));
+    }
+    ImVec2 parent_size = ImGui::GetWindowSize();
+    float button_size= 20.0f;
+    ImGui::Dummy(ImVec2((parent_size.x * 0.5f) - button_size, 1.0f));
+    ImGui::Button("Save Result",ImVec2(button_size, 1.0f));
+    ImGui::SameLine();
+
+    ImGui::End();
+}
