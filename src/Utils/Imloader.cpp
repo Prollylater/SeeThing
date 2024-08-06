@@ -53,13 +53,14 @@ void writeImgPng(const char *outputPath, const Mat<T> &image, bool flip)
     else
     {
         std::cerr << "Error, could not save the image. Check the file path and permissions." << std::endl;
+        std::cerr << "Width: " << width << " Height: " << height << " Channels: " << channels << std::endl;
     }
 }
 
 template void writeImgPng<uint8_t>(const char *outputPath, const Mat<uint8_t> &image, bool flip);
 template void writeImgPng<float>(const char *outputPath, const Mat<float> &image, bool flip);
 
-void writeImgPng(const char *outputPath, uint8_t *image, int width, int height, int channels,bool flip)
+void writeImgPng(const char *outputPath, uint8_t *image, int width, int height, int channels, bool flip)
 {
     stbi_flip_vertically_on_write(flip);
     int success = stbi_write_png(outputPath, width, height, channels, image, width * channels);
@@ -70,9 +71,9 @@ void writeImgPng(const char *outputPath, uint8_t *image, int width, int height, 
     else
     {
         std::cerr << "Error, could not save the image. Check the file path and permissions." << std::endl;
+        std::cerr << "Width: " << width << " Height: " << height << " Channels: " << channels << std::endl;
     }
 }
-
 
 template <typename T>
 void writeImgJpg(const char *outputPath, const Mat<T> &image, bool flip)
@@ -98,12 +99,15 @@ void writeImgJpg(const char *outputPath, const Mat<T> &image, bool flip)
     else
     {
         std::cerr << "Error, could not save the image. Check the file path and permissions." << std::endl;
+
+        std::cerr << "Passed values:" << std::endl;
+        std::cerr << "Width: " << width << " Height: " << height << " Channels: " << channels << std::endl;
     }
 }
 
 template void writeImgJpg<uint8_t>(const char *outputPath, const Mat<uint8_t> &image, bool flip);
 template void writeImgJpg<float>(const char *outputPath, const Mat<float> &image, bool flip);
-void writeImgJpg(const char *outputPath, uint8_t *image, bool flip, int width, int height, int channels)
+void writeImgJpg(const char *outputPath, uint8_t *image, int width, int height, int channels, bool flip)
 {
     stbi_flip_vertically_on_write(flip);
     int success = stbi_write_jpg(outputPath, width, height, channels, image, 90);
@@ -114,9 +118,9 @@ void writeImgJpg(const char *outputPath, uint8_t *image, bool flip, int width, i
     else
     {
         std::cerr << "Error, could not save the image. Check the file path and permissions." << std::endl;
+        std::cerr << "Width: " << width << " Height: " << height << " Channels: " << channels << std::endl;
     }
 }
-
 
 template <typename T>
 void writeImgBmp(const char *outputPath, const Mat<T> &image, bool flip)
@@ -143,13 +147,14 @@ void writeImgBmp(const char *outputPath, const Mat<T> &image, bool flip)
     else
     {
         std::cerr << "Error, could not save the image. Check the file path and permissions." << std::endl;
+        std::cerr << "Width: " << width << " Height: " << height << " Channels: " << channels << std::endl;
     }
 }
 
 template void writeImgBmp<uint8_t>(const char *outputPath, const Mat<uint8_t> &image, bool flip);
 template void writeImgBmp<float>(const char *outputPath, const Mat<float> &image, bool flip);
 
-void writeImgBmp(const char *outputPath, uint8_t *image, bool flip, int width, int height, int channels)
+void writeImgBmp(const char *outputPath, uint8_t *image, int width, int height, int channels, bool flip)
 {
     stbi_flip_vertically_on_write(flip);
     int success = stbi_write_bmp(outputPath, width, height, channels, image);
@@ -160,5 +165,6 @@ void writeImgBmp(const char *outputPath, uint8_t *image, bool flip, int width, i
     else
     {
         std::cerr << "Error, could not save the image. Check the file path and permissions." << std::endl;
+        std::cerr << "Width: " << width << " Height: " << height << " Channels: " << channels << std::endl;
     }
 }

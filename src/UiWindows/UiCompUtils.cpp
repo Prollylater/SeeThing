@@ -42,6 +42,7 @@ void SetupImGuiFonts()
 
 void ShowGenDisplayPanel(bool &show, GLuint &tex)
 {
+
     if (!show)
     {
         return;
@@ -60,17 +61,15 @@ void ShowGenDisplayPanel(bool &show, GLuint &tex)
     ImVec2 save_text_size = ImGui::CalcTextSize(save_text);
     if (ImGui::Button(save_text, ImVec2(save_text_size.x + button_size, save_text_size.y + button_size)))
     {
-        appobj::glengine.saveTextInst(tex, "Curretnlyreg");
+        appobj::glengine.saveTextInst(tex, "Lastdiplaysaved.jpg");
     };
     ImGui::SameLine();
-    ImGui::Spacing();
-    if (ImGui::Button("Reset", ImVec2(button_size, button_size)))
+    if (ImGui::Button("Reset", ImVec2(80.0f, 20.0f)))
     {
         // TODO, weird thing happen i huess
         appobj::glengine.deleteTexture(tex);
         show = false;
     };
-    ImGui::Spacing();
     ImGui::SameLine();
     const char *trans_text = "Transfer to Main";
     ImVec2 trans_text_size = ImGui::CalcTextSize(trans_text);

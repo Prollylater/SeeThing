@@ -26,6 +26,7 @@ namespace appobj
     // Create an engine that withold
 }
 
+// TODO Change directory ?
 class OpenGLEngine
 {
 

@@ -1,4 +1,9 @@
 #include "ImgEditorEngine.h"
+#define GET_NUM_CHANNELS(internalFormat)                             \
+    (internalFormat) == GL_RED ? 1 : (internalFormat) == GL_RG   ? 2 \
+                                 : ((internalFormat) == GL_RGB)  ? 3 \
+                                 : ((internalFormat) == GL_RGBA) ? 4 \
+                                                                 : 0
 
 // Define instance of the app object
 namespace appobj
@@ -58,25 +63,64 @@ bool OpenGLEngine::initImrender()
 }
 
 // TODO better management of canvas and current state to avoid this treatment
-//  Save an image 
+//  Save an image
 // Invoke when the image wasn't already stored in a canvas
 // Result of operation etc..
-bool OpenGLEngine::saveTextInst(GLuint& out_texture, const char* filename)
+bool OpenGLEngine::saveTextInst(GLuint &out_texture, const char *filename)
 {
-    GLint width, height, channels;
+    GLint width, height, format;
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, out_texture);
-    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &channels);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &format);
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+    int channels = GET_NUM_CHANNELS(format);
     // TODO Channles data not stored
-    int size = width * height * channels;
+    int size = width * height * (channels);
+    if (channels == 3)
+    {   
+        //Use Pack Alignment to mirror the UNPACK_ALIGNMENT at write
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    }
+
+    std::cout << "Size related to file writing (w, h, chan): " << std::endl;
+    std::cout << width <<" "<< height << channels << std::endl;
     uint8_t *pixels = new uint8_t[size];
 
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-
-    //TODO GIve choice between mutiple format
-    writeImgPng(filename, pixels, true, width, height, channels);
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR)
+    {
+        std::cerr << "Error during saving from texture " << error << std::endl;
+        return 0;
+    }
+    // TODO GIve choice between mutiple format
+    writeImgJpg(filename, pixels,  width, height, channels,true);
 }
+/*
+bool OpenGLEngine::saveCurrentDisplay(GLuint &out_texture, const char *filename)
+{
+    GLuint textureObj = ...; // the texture object - glGenTextures
+
+    GLuint fbo;
+    glGenFramebuffers(1, &fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureObj, 0);
+
+    int data_size = mWidth * mHeight * 4;
+    GLubyte* pixels = new GLubyte[mWidth * mHeight * 4];
+    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteFramebuffers(1, &fbo);
+        GLenum error = glGetError();
+        if (error != GL_NO_ERROR)
+        {
+            std::cerr << "Error during saving from fbo: " << error << std::endl;
+        }
+        return 1;}
+    */
 
 // Create a texture using the passed image data
 bool OpenGLEngine::outputText(Mat<uint8_t> &image, GLuint *out_texture)
@@ -200,7 +244,7 @@ void OpenGLEngine::copyTextureToFBO(GLuint &tex, int width, int height)
     }
     glBindVertexArray(loadedvao.m_vao_id);
 
-    //Create a temporary Ressource holder
+    // Create a temporary Ressource holder
     TextureResource temp_tex_res;
     initTextRess(temp_tex_res, tex);
 

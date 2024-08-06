@@ -8,16 +8,15 @@
 #include "IconsCodicons.h" //Simpler here
 #include <unordered_map>
 #include "StructParam.h"
+#include <imfilebrowser.h>
 
-//Simpler here
+// Simpler here
 #include "GlobalStates.h"
 #include "ImgEditorEngine.h" //TODO Another place ?
-
 
 void ShowColorPicker(bool &show, ImVec4 &color);
 void ShowGenDisplayPanel(bool &show, GLuint &tex);
 
 void SetupImGuiFonts();
-
 
 #endif

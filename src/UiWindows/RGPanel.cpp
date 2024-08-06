@@ -345,6 +345,7 @@ void ShowRegionGrowingArea()
         if (/*width * height != 0 &&*/ display != 0)
         {
             result_display = true;
+            //Directly use globalstates enum
             ShowGenDisplayPanel(result_display, display);
         }
     }

@@ -7,6 +7,7 @@
 // extern MainWinStHandler display_states;
 // extern RGStatesHandler rg_states;
 
+
 void ShowImageRenderingArea()
 {
     // create a file browser instance
@@ -50,7 +51,7 @@ void ShowImageRenderingArea()
                 }
                 if (ImGui::MenuItem("Save"))
                 {
-                    appobj::glengine.saveTextInst(display, "Main");
+                    appobj::glengine.saveTextInst(display, "./main.jpg");
                 }
                 if (ImGui::MenuItem("Save as"))
                 {
@@ -69,6 +70,7 @@ void ShowImageRenderingArea()
         }
         // Menu Bar
         // IMGUI file dialog box
+        
         fileDialog.Display();
         if (fileDialog.HasSelected())
         {
@@ -180,10 +182,7 @@ void ShowImageRenderingArea()
                 handleClrPencil(child_pos, child_size, im_width, im_height, color_pencil);
             }
 
-            /*if( display_states.isTrue(MainWinSt::clr_pencil)){
-            handleClrFill(child_pos, child_size, im_width, im_height, color_pencil);
-            }*/
-            // TODO Eventually scale or push to the middle
+            // TODO Eventually scale or push to the middle the image
             ImGui::Text("Hovering over Child Window!");
             ImVec2 widgetPos = ImGui::GetItemRectMin(); // Get position of the current widget
                                                         /* if (ImGui::IsMouseHoveringRect(widgetPos, ImVec2(widgetPos.x + 100, widgetPos.y + 20))) {
