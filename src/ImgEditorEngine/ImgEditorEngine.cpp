@@ -5,9 +5,11 @@
                                  : ((internalFormat) == GL_RGBA) ? 4 \
                                                                  : 0
 
-// Define instance of the app object
+// Define instance of the app object which each correspond to a feature
 namespace appobj
 {
+    //Some take their data directly from this object
+    //This object is not updated
     Canvas canvas;
     // Opengl Engine declared elsewhere
     OpenGLEngine glengine;
@@ -63,8 +65,8 @@ bool OpenGLEngine::initImrender()
 }
 
 // TODO better management of canvas and current state to avoid this treatment
-//  Save an image
-// Invoke when the image wasn't already stored in a canvas
+// Save an image
+// Invoked when the image wasn't already stored in a canvas
 // Result of operation etc..
 bool OpenGLEngine::saveTextInst(GLuint &out_texture, const char *filename)
 {
@@ -92,12 +94,14 @@ bool OpenGLEngine::saveTextInst(GLuint &out_texture, const char *filename)
     GLenum error = glGetError();
     if (error != GL_NO_ERROR)
     {
-        std::cerr << "Error during saving from texture " << error << std::endl;
+        std::cerr << "Error during saving  imagefrom texture " << error << std::endl;
         return 0;
     }
     // TODO GIve choice between mutiple format
     writeImgJpg(filename, pixels,  width, height, channels,true);
 }
+
+
 /*
 bool OpenGLEngine::saveCurrentDisplay(GLuint &out_texture, const char *filename)
 {
@@ -202,7 +206,7 @@ void OpenGLEngine::renderTexture()
     prog.use();
     bindTexture(imageress[activetexture], prog.shader_id, "image_color");
     glBindVertexArray(loadedvao[activevao].m_vao_id);
-    glDrawElements(GL_TRIANGLES, loadedvao[activevao].m_count, GL_UNSIGNED_INT, 0);
+    glDrawElements( GL_TRIANGLE_STRIP, loadedvao[activevao].m_count, GL_UNSIGNED_INT, 0);
     GLenum error = glGetError();
 
     if (error != GL_NO_ERROR)
@@ -242,7 +246,7 @@ void OpenGLEngine::copyTextureToFBO(GLuint &tex, int width, int height)
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         return;
     }
-    glBindVertexArray(loadedvao.m_vao_id);
+    glBindVertexArray(loadedvao.getVao());
 
     // Create a temporary Ressource holder
     TextureResource temp_tex_res;
@@ -250,7 +254,7 @@ void OpenGLEngine::copyTextureToFBO(GLuint &tex, int width, int height)
 
     bindTexture(temp_tex_res, prog.shader_id, "image_color");
     std::cout << "id" << prog.shader_id << std::endl;
-    glDrawElements(GL_TRIANGLES, loadedvao.m_count, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLE_STRIP, loadedvao.m_count, GL_UNSIGNED_INT, 0);
 
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -296,7 +300,7 @@ void OpenGLEngine::renderColChange(std::vector<Vec<GLfloat>> &to_color, const Ve
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         return;
     }
-    glBindVertexArray(work_vao.m_vao_id);
+    glBindVertexArray(work_vao.getVao());
     prog.addUniform3("new_color", color);
     prog.addUniform1("text_height", height);
     prog.addUniform1("text_width", width);
@@ -304,6 +308,7 @@ void OpenGLEngine::renderColChange(std::vector<Vec<GLfloat>> &to_color, const Ve
 
     // Directly use the size of the to color arrray sinnce no ebo were crearted for this
     // glDrawElements(GL_POINTS, to_color.size(), GL_UNSIGNED_INT, 0);
+    //TODO create draw function that cna make this choice
     glDrawArrays(GL_POINTS, 0, to_color.size()); // Draw 1 point
 
     error = glGetError();

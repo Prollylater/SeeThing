@@ -11,7 +11,7 @@ public:
 
     Canvas() = default;
     // TODO remove remnant of singleton patter here
-    Canvas(const Canvas &) = delete;
+    Canvas(const Canvas &) = delete; 
     Canvas &operator=(const Canvas &) = delete;
     // Layer management
     void addLayer(Layer &layers);

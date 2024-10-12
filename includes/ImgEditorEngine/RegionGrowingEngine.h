@@ -3,7 +3,7 @@
 #include "StructParam.h"
 #include "RegionGrowingAlg.h"
 // Module in charge of region growing
-//  TODO Transfer relevant part to cpp and add to cmake
+// TODO Transfer relevant part to cpp and add to cmake
 // TODO add benchmark capacity to output to screen
 class RGEngine;
 

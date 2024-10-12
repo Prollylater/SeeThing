@@ -1,7 +1,7 @@
 #include "RGPanel.h"
 
 // TODO replace all variables by constant use of their respecitve struct param
-
+// TODO FAILSAFE For the case where we execute without an image defined
 // TODO Add usage of active texture and layer concept
 // TODO Put description where it's necessary
 void ShowSlicParameter(bool &show, GLuint &tex)
@@ -342,10 +342,10 @@ void ShowRegionGrowingArea()
             break;
         }
 
-        if (/*width * height != 0 &&*/ display != 0)
+        if (display != 0)
         {
             result_display = true;
-            //Directly use globalstates enum
+            //TODO: Directly use globalstates enum
             ShowGenDisplayPanel(result_display, display);
         }
     }

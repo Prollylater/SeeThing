@@ -11,7 +11,6 @@ struct TextureResource
     GLuint texture_id;
     GLuint sampler_id;
     int unit;
-
     TextureResource() = default;
 };
 // Initialize the texture managment structure
@@ -23,8 +22,6 @@ void release(TextureResource &texResource);
 
 void freeTexture(TextureResource &texResource);
 void freeTexture(GLuint &texResource);
-
-
 
 enum class TextType
 {
@@ -59,6 +56,7 @@ struct TextTraits<TextType::MT_FLOAT>
     static constexpr GLenum data_type = GL_FLOAT;
 };
 
+//Make texture funciton should ony be templated with the following
 using textuc = TextTraits<TextType::MT_UC>;
 using textfloat = TextTraits<TextType::MT_UINT>;
 using textuint = TextTraits<TextType::MT_FLOAT>;
@@ -130,7 +128,7 @@ GLuint makeTextureMat(const int unit,
     // prefiltre la texture
     //glGenerateMipmap(GL_TEXTURE_2D);
 
-     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST); // BY default this use a MIPMAP, hence yhou need to define the two parameter LEVEL
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST); // BY default this use a MIPMAP, hence yhou need to define the two parameter LEVEL
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);

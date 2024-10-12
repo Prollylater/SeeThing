@@ -1,6 +1,7 @@
 #include "Canvas.h"
 
 // Layer management
+
 void Canvas::addLayer(Layer &layer)
 {
     layers.push_back(layer);

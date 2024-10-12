@@ -2,11 +2,10 @@
 
 // Structure holding a vao and it's attached vbo and ebo
 
-BufferIDsGroups::BufferIDsGroups(GLuint vao_id, GLuint vbo_id, GLuint ebo_id) : m_vao_id(vao_id), m_vbo_id(vao_id), m_ebo_id(vao_id){};
-BufferIDsGroups::BufferIDsGroups(GLuint vao_id, GLuint vbo_id, GLuint ebo_id, int count) : m_vao_id(vao_id), m_vbo_id(vao_id), m_ebo_id(vao_id), m_count(count){};
+BufferIDsGroups::BufferIDsGroups(GLuint vao_id, GLuint vbo_id, GLuint ebo_id) : m_vao_id(vao_id), m_vbo_id(vao_id), m_ebo_id(vao_id) {};
+BufferIDsGroups::BufferIDsGroups(GLuint vao_id, GLuint vbo_id, GLuint ebo_id, int count) : m_vao_id(vao_id), m_vbo_id(vao_id), m_ebo_id(vao_id), m_count(count) {};
 void BufferIDsGroups::zeros()
 {
-
     m_vao_id = 0;
     m_vbo_id = 0;
     m_ebo_id = 0;
@@ -15,6 +14,11 @@ void BufferIDsGroups::zeros()
 GLuint BufferIDsGroups::getVao()
 {
     return m_vao_id;
+}
+
+int BufferIDsGroups::getCount()
+{
+    return m_count;
 }
 
 // TODO REBIND FUNCTION
@@ -47,7 +51,7 @@ BufferIDsGroups createBuffers(const std::vector<Vec<float>> &verticestab, const 
         glGenBuffers(1, &vbotex);
         glBindBuffer(GL_ARRAY_BUFFER, vbotex);
         glBufferData(GL_ARRAY_BUFFER, texcoords.size() * sizeof(Vec<float>), texcoords.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (const void *)0);
         glEnableVertexAttribArray(1);
     }
     // TODO Add normal in case going to 3D

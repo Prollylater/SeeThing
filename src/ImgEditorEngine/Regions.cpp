@@ -278,3 +278,24 @@ bool isSimilarLuminance3cGlobal(const Mat<uint8_t> &bgrImage,
 	// Compare the intensity difference with the threshold
 	return std::abs(weightedIntensity - region.getMeanIntensity()) < threshold;
 }
+
+Vec<uint8_t> Region::computeColorIntensity(const Mat<uint8_t> &image) const
+{
+    int chanx = 0;
+    int chany = 0;
+    int chanz = 0;
+
+    for (const std::shared_ptr<Pixl> &pixel : pixels)
+    {
+        chanx += image.atVec(pixel->y, pixel->x).x;
+        chany += image.atVec(pixel->y, pixel->x).y;
+        chanz += image.atVec(pixel->y, pixel->x).z;
+
+    }
+    chanx /= pixels.size();
+    chany /= pixels.size();
+    chanz /= pixels.size();
+
+
+    return Vec<uint8_t>(chanx,chany,chanz);
+}

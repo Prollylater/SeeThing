@@ -10,8 +10,25 @@ struct Vec
   T x, y, z;
 
   Vec() : x(0), y(0), z(0) {}
-  Vec(T _x, T _y, T _z) : x(_x), y(_y), z(_z){};
+  Vec(T _x, T _y, T _z) : x(_x), y(_y), z(_z) {};
   Vec(const Vec &other) : x(other.x), y(other.y), z(other.z) {}
+
+  T operator[](int axis)
+  {
+    switch (axis)
+    {
+    case 0:
+      return x;
+    case 1:
+      return y;
+    case 2:
+      return z;
+    default:
+      break;
+    }
+      return x;
+  };
+
   Vec &operator=(const Vec &other)
   {
     if (this != &other)
@@ -39,7 +56,7 @@ struct Vec
   };
 
   // Destructor
-  ~Vec() =default;
+  ~Vec() = default;
 
   // Move constructor
   Vec(Vec &&other) noexcept : x(std::move(other.x)), y(std::move(other.y)), z(std::move(other.z))
@@ -127,13 +144,12 @@ struct Vec
 
   // Comparison
 
-  bool operator<(const Vec<T>& vec) const
+  bool operator<(const Vec<T> &vec) const
   {
     return (x < vec.x) || ((x == vec.x) && ((y < vec.y) || ((y == vec.y) && (z < vec.z))));
   }
 
-  
-  bool operator!=(const Vec<T>&vec) const
+  bool operator!=(const Vec<T> &vec) const
   {
     return (x != vec.x) && (y != vec.y) && (z != vec.z);
   }

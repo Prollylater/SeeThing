@@ -66,17 +66,20 @@ void ShowGenDisplayPanel(bool &show, GLuint &tex)
     ImGui::SameLine();
     if (ImGui::Button("Reset", ImVec2(80.0f, 20.0f)))
     {
-        // TODO, weird thing happen i huess
+        // TODO, weird thing happen
         appobj::glengine.deleteTexture(tex);
         show = false;
     };
     ImGui::SameLine();
-    const char *trans_text = "Transfer to Main";
-    ImVec2 trans_text_size = ImGui::CalcTextSize(trans_text);
+    const char *transfer_text = "Transfer to Main";
+    ImVec2 trans_text_size = ImGui::CalcTextSize(transfer_text);
 
-    if (ImGui::Button(trans_text, ImVec2(trans_text_size.x + button_size, trans_text_size.y + button_size)))
+    if (ImGui::Button(transfer_text, ImVec2(trans_text_size.x + button_size, trans_text_size.y + button_size)))
     {
         appobj::glengine.copyTextureToFBO(tex, width, height);
+        // Delete the image to stop hogging memory
+        appobj::glengine.deleteTexture(tex);
+        show = false;
     };
     ImGui::End();
 }

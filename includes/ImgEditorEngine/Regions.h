@@ -93,7 +93,9 @@ public:
 
     template <typename T>
     // Compute the mean intensity of every color in the region
-    Vec<T> computeColorIntensity(const Mat<T> &image);
+    Vec<T> computeColorIntensity(const Mat<T> &image) const;
+    Vec<uint8_t> computeColorIntensity(const Mat<uint8_t> &image) const;
+
 
     void fuse(Region *fusedin);
 
@@ -101,7 +103,7 @@ public:
 
     void addAdjacentRegion(Region *region);
 
-   // friend void fuseRegions(std::vector<Region> &regions, float threshold);
+    // friend void fuseRegions(std::vector<Region> &regions, float threshold);
 
     // Accessors
     float getMeanIntensity() const;
@@ -118,8 +120,7 @@ public:
     ~Region() = default;                        // CLeanup handled by Sharedptr
 };
 
-    void fuseRegions(std::vector<Region> &regions, float threshold);
-
+void fuseRegions(std::vector<Region> &regions, float threshold);
 
 // -----------------------------------------------------
 // ---------- SIMILARITY FUNCTION --------------
@@ -234,17 +235,27 @@ float Region::recomputeMeanIntensity(const Mat<T> &image)
     return sumIntensity / pixels.size();
 }
 
+//Work and int, not so much with a type as limited as uint_8
+//Or divide ach time
+// TODO Rethink those function and 
 template <typename T>
-Vec<T> Region::computeColorIntensity(const Mat<T> &image)
+Vec<T> Region::computeColorIntensity(const Mat<T> &image) const
 {
     Vec<T> sumIntensity;
+
     for (const std::shared_ptr<Pixl> &pixel : pixels)
     {
         sumIntensity += image.atVec(pixel->y, pixel->x);
     }
+
     sumIntensity /= pixels.size();
+
     return sumIntensity;
 }
+
+
+
+
 
 template <typename T>
 bool isSimilarColorAverage(const Mat<T> &bgrImage, const Region &region1,

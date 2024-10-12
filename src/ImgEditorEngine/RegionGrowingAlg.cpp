@@ -22,11 +22,11 @@ Mat<uint8_t> composeSegMean(const Mat<uint8_t> &src, std::vector<Region> &region
     Mat<uint8_t> resultMat(src.getRows(), src.getCols(), src.getChannels(),
                            src.getClrspace());
 
-    for (Region &region : regions)
+    for (const Region &region : regions)
     {
         if (region.getSizePix() > 0)
         {
-            for (std::shared_ptr<Pixl> &pixelptr : region.pixels)
+            for (const std::shared_ptr<Pixl> &pixelptr : region.pixels)
             {
                 resultMat.atChannel(pixelptr->y, pixelptr->x, 0) = static_cast<uint8_t>(region.getMeanIntensity());
             }
@@ -42,20 +42,24 @@ Mat<uint8_t> composeSegMean(const Mat<uint8_t> &src, std::vector<Region> &region
 Mat<uint8_t> composeSegMeanColor(const Mat<uint8_t> &src, std::vector<Region> &regions)
 {
     Mat<uint8_t> resultMat(src.getRows(), src.getCols(), 3);
-    for (Region &region : regions)
+    std::cout<<"INmea her" <<std::endl;
+
+    for (const Region &region : regions)
     {
         if (region.getSizePix() > 0)
         {
             Vec<uint8_t> regmeanclr = (region.computeColorIntensity(src));
 
-            for (std::shared_ptr<Pixl> &pixelptr : region.pixels)
+            for (const std::shared_ptr<Pixl> &pixelptr : region.pixels)
             {
-                resultMat.at(pixelptr->y, pixelptr->x)[0] = regmeanclr.x;
-                resultMat.at(pixelptr->y, pixelptr->x)[1] = regmeanclr.y;
-                resultMat.at(pixelptr->y, pixelptr->x)[2] = regmeanclr.z;
+                resultMat.at(pixelptr->y, pixelptr->x)[0] = regmeanclr.x ;
+                resultMat.at(pixelptr->y, pixelptr->x)[1] = regmeanclr.y ;
+                resultMat.at(pixelptr->y, pixelptr->x)[2] = regmeanclr.z ;
             }
         }
     }
+    std::cout<<"INmea her" <<std::endl;
+    
     writeImgPng("./UEB3", resultMat, true);
 
     return resultMat;

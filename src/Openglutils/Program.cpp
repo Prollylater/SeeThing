@@ -1,7 +1,7 @@
 #include "Program.h"
 
-GLuint compileShader(const GLuint program, const GLenum shader_type, const std::string &source);
-bool compileProgram(const GLuint program);
+//GLuint compileShader(const GLuint program, const GLenum shader_type, const std::string &source);
+//bool compileProgram(const GLuint program);
 
 std::string read(const std::string &filename)
 {

@@ -64,8 +64,6 @@ std::queue<std::shared_ptr<Pixl>> putGerms(const Mat<T> &img, std::vector<Region
     return seedlist;
 }
 
-// Pose des germes  heuristiques basé sur un histogramme
-
 // Pose des germes aléatoire après division de l'image
 template <typename T>
 std::queue<std::shared_ptr<Pixl>> putGermsDivide(const Mat<T> &img, std::vector<Region> &regions, int n)
@@ -350,7 +348,6 @@ void regionGrowing3c(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>> &pix
                     if (similar)
                     {
                         // Add the neighboring pixel to the region
-
 
                         pixelQueue.push(neighbor);
 
@@ -746,7 +743,6 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
 
     for (int i = 0; i < supapixllist.size(); ++i)
     {
-
         ClustersMap map;
         vectorOfMaps.push_back(map);
     }
@@ -760,6 +756,10 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
     // Pas de convergence
     {
         std::cout << "First " << supapixllist.size() << std::endl;
+
+        std::cout << "Execution time: A " << std::endl;
+
+        auto starta = std::chrono::high_resolution_clock::now();
 
         // For each cluster center ck
         for (std::shared_ptr<Pixl> &centerPixel : supapixllist)
@@ -811,6 +811,18 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
             }
         }
 
+        auto enda = std::chrono::high_resolution_clock::now();
+
+        // Calculate the duration
+        std::chrono::duration<double> durationa = enda - starta;
+
+        // Output the result in seconds
+        std::cout << "Execution time A: " << durationa.count() << " seconds" << std::endl;
+
+        std::cout << "Execution timeB: " << std::endl;
+
+        auto startb = std::chrono::high_resolution_clock::now();
+
         for (std::shared_ptr<Pixl> &centerPixel : supapixllist)
         {
 
@@ -818,6 +830,7 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
             int sum_y = 0;
             int number = 1;
             // Recompute center
+            // Item 5
             for (const auto &pair : vectorOfMaps[centerPixel->getId()])
             {
 
@@ -834,10 +847,17 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
         // No indication about the calculation of the residual error so we take 10 since it usually converge by 10
         std::cout << "newtE ? " << supapixllist.size() << std::endl;
 
+        auto endb = std::chrono::high_resolution_clock::now();
+
+        // Calculate the duration
+        std::chrono::duration<double> durationb = endb - startb;
+
+        // Output the result in seconds
+        std::cout << "Execution time: " << durationb.count() << " seconds" << std::endl;
+
         E++;
     }
 
-    std::cout << "ze" << std::endl;
     int indexreg = 0;
     for (auto &map : vectorOfMaps)
     {
