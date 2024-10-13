@@ -6,10 +6,9 @@ The project is an OpenGL-based application utilizing ImGui for the graphical use
 ## Table of Contents
 1. [Features](#features)
 2. [Prerequisites](#prerequisites)
-3. [Building the Project](#building-the-project)
-4. [Running the Application](#running-the-application)
-5. [Configuration](#configuration)
-6. [Usage](#usage)
+3. [Building and Running the Project](#building-and-running-the-project)
+4. [Configuration](#configuration)
+5. [Usage](#usage)
 
 ## Features currently implemented 
 - ImGui-based graphical user friendly interface (Should be soon!)
@@ -24,11 +23,28 @@ Before building and running the application, make sure you have the following so
 - **OpenGL** (version 3.3 or higher)
 - **GLFW** 
 
-## Building the Project
+## Building and Running the Project
 
 To build the project, follow these steps:
 
 1. **Clone the repository:**
    ```bash
-   git clone 
-   cd 
+   git clone https://github.com/Prollylater/SeeThing.git
+   cd
+2. Install dependency
+   **GLFW:**
+   -Use your favorite package manager or any method you prefer. Or:
+     ```bash
+     sudo apt install libglfw3-dev
+     ```
+   **CMAKE:**
+     ```bash
+      sudo apt install cmake
+     ```
+3. Building and running
+    ```bash
+      mkdir build
+      cd build
+      cmake ..
+      make
+    ```
