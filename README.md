@@ -1,9 +1,7 @@
-# OpenGL ImGui Application
+# Yet to be Named OpenGL-Based Application
 
-This project is an OpenGL-based application utilizing ImGui for the graphical user interface, GLEW for managing OpenGL extensions, and CMake for building the project.
-
-MeshClouder is a standalone program developed in C++ for Linux and Windows. It allows you to transform 3D mesh files (in .obj and .ply formats) into point clouds.
-The project aims to provide a user-friendly graphical interface to facilitate the conversion process. Users can adjust various parameters for the mesh-to-point cloud conversion and export the resulting point cloud as a .ply file.
+This application offer a graphical interface and code base aiming to be modulable for testing and implementing computer vision algorithm going from segmentation to color transfer and much more.
+The project is an OpenGL-based application utilizing ImGui for the graphical user interface, GLEW for managing OpenGL extensions, and CMake for building the project.
 
 ## Table of Contents
 1. [Features](#features)
