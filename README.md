@@ -48,3 +48,5 @@ To build the project, follow these steps:
       cmake ..
       make
     ```
+
+![image](https://github.com/user-attachments/assets/33926deb-2afa-4857-ac03-36b3907d4e49)
