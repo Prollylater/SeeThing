@@ -9,6 +9,7 @@ project(MyImgEditor LANGUAGES CXX)
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(glfw3 REQUIRED)
+find_package(OpenMP)
 
 
 # Project directories
@@ -97,6 +98,7 @@ file(COPY ressources DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 add_executable(test ${PROJECT_SRC})
 
 
+
 # Include directories
 target_include_directories(test PUBLIC 
     ${INCLUDES_DIRS}   
@@ -104,16 +106,27 @@ target_include_directories(test PUBLIC
 
 
 # Link libraries
-target_link_libraries(test
+set(LINK_LIBS
     ${OPENGL_LIBRARIES}
     ${GLEW_LIBRARIES}
     glfw
 )
 
+if(OpenMP_CXX_FOUND)
+    # Link OpenMP if found
+    list(APPEND LINK_LIBS OpenMP::OpenMP_CXX)
+    message(STATUS "OpenMP found and linked to the project.")
+else()
+    # Print a message if OpenMP is not found
+    message(WARNING "OpenMP was not found.")
+endif()
 
-# Optionally, if you have additional source files, you can add them like this:
-# target_sources(MyProject PRIVATE src/AnotherSource.cpp)
 
-# Add libraries if necessary (for example, if you need to link to an external library)
-# target_link_libraries(MyProject PRIVATE some_library)
+target_link_libraries(test ${LINK_LIBS})
+
+
+
+
+
+
 

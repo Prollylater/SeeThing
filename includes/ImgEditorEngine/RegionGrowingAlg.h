@@ -530,15 +530,15 @@ std::vector<std::shared_ptr<Pixl>> selectSuperpixelCenter(const Mat<T> &img, std
 
     // Approximation of the size of a superpixel
 
-    int S = sqrt(img.getRows() * img.getCols() / K);
+    int S = std::sqrt(img.getRows() * img.getCols() / K);
     // Push the first grid
 
     int height = img.getRows();
     int width = img.getCols();
-    // allocate as much region as there is seed
-    // for (int i = 0; i < germquant; ++i) {
-    //   regions.push_back(Region());
-    //}
+    std::cout << "Sizze" << std::endl;
+
+    std::cout << height << std::endl;
+    std::cout << width << std::endl;
 
     for (int x = S / 2; x < width; x += S)
     {
@@ -546,7 +546,7 @@ std::vector<std::shared_ptr<Pixl>> selectSuperpixelCenter(const Mat<T> &img, std
         {
             // X y in the pixel
             // TODO temp solution
-            std::shared_ptr<Pixl> pix(new Pixl(y, x, index));
+            std::shared_ptr<Pixl> pix(new Pixl(x, y, index));
             regions.push_back(Region());
             superpixellist.push_back(pix);
 
@@ -596,38 +596,43 @@ float calcGradientSobel(int x, int y, const Mat<T> &image)
     Mat<float> neighborhoodmatc[3];
     neighborhoodmat.splitMat(neighborhoodmatc);
 
-    // COnsidering all element
+    // Test with squaring left
+    //  COnsidering all element
+    auto compute_component = [](const auto &channel, const auto &xchange, const auto &ychange)
+    {
+        float sum_x = (channel * xchange).sumComponents();
+        float sum_y = (channel * ychange).sumComponents();
 
-    float gradientL = std::sqrt(std::pow(((neighborhoodmatc[0] * xchange).sumComponents()), 2.0) +
-                                std::pow(((neighborhoodmatc[0] * ychange).sumComponents()), 2.0));
+        // Return the squared gradient
+        return sum_x * sum_x + sum_y * sum_y;
+    };
 
-    float gradientA = std::sqrt(std::pow(((neighborhoodmatc[1] * xchange).sumComponents()), 2.0) +
-                                std::pow(((neighborhoodmatc[1] * ychange).sumComponents()), 2.0));
+    // Compute squared gradients for each channel (L, A, B)
+    float gradientL = compute_component(neighborhoodmatc[0], xchange, ychange);
+    float gradientA = compute_component(neighborhoodmatc[1], xchange, ychange);
+    float gradientB = compute_component(neighborhoodmatc[2], xchange, ychange);
 
-    float gradientB = std::sqrt(std::pow(((neighborhoodmatc[2] * xchange).sumComponents()), 2.0) +
-                                std::pow(((neighborhoodmatc[2] * ychange).sumComponents()), 2.0));
-
-    float gradient = gradientL + gradientA + gradientB;
-
+    float gradient = std::sqrt(gradientL) + std::sqrt(gradientA) + std::sqrt(gradientB);
     return gradient;
 }
 
 template <typename T>
-double calcdistance5d(int x, int y, int i, int j, Mat<T> &image, const SlicParameter &param, int S)
+inline double calcdistance5d(int x, int y, int i, int j, Mat<T> &image, const SlicParameter &param, int S)
 {
 
     // DIstance of channel related values
     double distanceL = image.at(y, x)[0] - image.at(j, i)[0];
     double distanceA = image.at(y, x)[1] - image.at(j, i)[1];
     double distanceB = image.at(y, x)[2] - image.at(j, i)[2];
-    double distanceLAB = sqrt((pow(distanceL, 2.0) + pow(distanceA, 2.0) + pow(distanceB, 2.0)));
+    double distanceLAB = std::sqrt(distanceL * distanceL + distanceA * distanceA + distanceB * distanceB);
     // DIstance on the plane
     // m= compactness
     //. When m is small, the resulting superpixels adhere more tightly to image boundaries, but have less regular size and shap
     //. When m is large, spatial proximity is more importantand the resulting superpixels are more compa
     // m is in the range 1 to 40
-    // TODO, add as parameter
-    double distanceXY = (std::pow((i - x), 2.0) + std::pow((j - y), 2.0));
+    // TODO, Optimization tend to change the result
+    // TEst which is the best result
+    double distanceXY = (i - x) * (i - x) + (j - y) * (j - y);
     double distanceXYnormalized = param.m_m * (std::sqrt(distanceXY) / S);
 
     double D = distanceLAB + distanceXYnormalized;
@@ -646,29 +651,26 @@ void moveCenterGradBased(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>>
     Mat<T> imgLABspace(image);
     // Conversion to LABSPACEimg
     imgLABspace.toLabSpace(param);
-    int b = 0;
 
-    // TODO, create the matrix according to the number of pixl instead using the img dimension
-    // Useful if multiple Point are around only
-    // TODO Check if more useful elsewhere
-    // Creating a Mat to store all our potential Gradient Value
-
-    /*
-    Mat<float> gradientCache(image.getRows(), image.getCols(),1);
+    // Doubt the memory cost is worth it as callculation ere are done one time
+    /*Mat<float> gradientCache(image.getRows(), image.getCols(),1);
     auto getGradient = [&](int x, int y)  {
         if (gradientCache.atChannel(y,x, 0) == 0.0) {
-            b++;
             gradientCache.atChannel(y,x, 0) = calcGradientSobel<T>(x, y, imgLABspace);
         }
         return gradientCache.atChannel(y,x,0);
     };*/
+
+    // Calculate the duration
+
+    auto starta = std::chrono::high_resolution_clock::now();
 
     for (std::shared_ptr<Pixl> &currentPixel : supapixllist)
     {
         // Create a cache for gradients
 
         float mingradient = calcGradientSobel<T>(currentPixel->x, currentPixel->y, imgLABspace);
-
+        // float mingradient = getGradient(currentPixel->x, currentPixel->y);
         int startX = std::max(currentPixel->x - 1, 0);
         int endX = std::min(currentPixel->x + 1, image.getCols() - 1);
         int startY = std::max(currentPixel->y - 1, 0);
@@ -681,6 +683,7 @@ void moveCenterGradBased(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>>
             {
 
                 float currentgradient = calcGradientSobel<T>(i, j, imgLABspace);
+                // float currentgradient = getGradient(i, j);
                 if (mingradient > currentgradient)
                 {
                     mingradient = currentgradient;
@@ -690,14 +693,13 @@ void moveCenterGradBased(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>>
             }
         }
     }
+
+    auto enda = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> durationa = enda - starta;
+
+    // Output the result in seconds
+    std::cout << "Execution time In Move Center: " << durationa.count() << " seconds" << std::endl;
 }
-
-/* TODO What was it for ? Just a test ?
- void recomputeCenter( cv::Mat& image, std::vector<std::shared_ptr<Pixl>> &supapixllist, const auto& vectorOfMaps ){
-    */
-
-// cols == x rows == y
-// #include <typeinfo>
 
 // TODO Either template it or something idk
 /*
@@ -727,6 +729,41 @@ bool CheckSpatialConnectivitySlic(const Mat<T> &image, float id, int x, int y, i
 }
 */
 
+struct slicMapPair
+{
+    int first;
+    int second;
+
+    // Constructor for convenience
+    slicMapPair() = default;
+    slicMapPair(const int &fir, const int &secd) : first(fir), second(secd) {};
+    slicMapPair(const slicMapPair &rhs) : first(rhs.first), second(rhs.second) {};
+
+    // Overload equality operator for comparisons
+    bool operator==(const slicMapPair &rhs) const
+    {
+        return first == rhs.first && second == rhs.second;
+    }
+
+    slicMapPair &operator=(const slicMapPair &rhs)
+    {
+        if (this != &rhs)
+        {
+            first = rhs.first;
+            second = rhs.second;
+        }
+        return *this;
+    }
+
+    struct Hash
+    {
+        std::size_t operator()(const slicMapPair &p) const
+        {
+            return ((std::hash<int>()(p.first) << 1) ^ std::hash<int>()(p.second));
+        }
+    };
+};
+#include "omp.h"
 // TODO Enforce spatial connectivity
 // Replace std::map and pair ?
 template <typename T>
@@ -737,9 +774,12 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
     imgLABspace.toLabSpace(param.m_labparam);
     int imgsize = image.getRows() * image.getCols();
 
-    typedef std::map<std::pair<int, int>, std::pair<int, int>> ClustersMap;
+    // typedef std::map<std::pair<int, int>, std::pair<int, int>> ClustersMap;
+    // THe two method, unorderede map and map seem roughly equal
+    typedef std::unordered_map<slicMapPair, slicMapPair, slicMapPair::Hash> ClustersMap;
+
     std::vector<ClustersMap> vectorOfMaps;
-    int S = sqrt(imgsize / param.m_K);
+    int S = std::sqrt(imgsize / param.m_K);
 
     for (int i = 0; i < supapixllist.size(); ++i)
     {
@@ -751,6 +791,7 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
     // Hold both distance and current region index respectively in first and second channel
     Mat<float> distance(image.getRows(), image.getCols(), 2);
     distance.setTo(std::numeric_limits<float>::infinity());
+
     int E = 0;
     while (E < 9)
     // Pas de convergence
@@ -759,9 +800,9 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
 
         std::cout << "Execution time: A " << std::endl;
 
-        auto starta = std::chrono::high_resolution_clock::now();
-
         // For each cluster center ck
+#pragma omp parallel for
+
         for (std::shared_ptr<Pixl> &centerPixel : supapixllist)
         {
             // Precalculate BOundary
@@ -770,27 +811,22 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
             int startY = std::max(centerPixel->y - 2 * S, 0);
             int endY = std::min(centerPixel->y + 2 * S, image.getRows() - 1);
 
-            // Enforce spatial connecitvity
-            // For each pixel in a 2s*2s region around ck
             for (int i = startX; i <= endX; ++i)
-            { // TODO <= necessary ?
+            {
                 for (int j = startY; j <= endY; ++j)
                 {
                     // Recompute the distance from current pixel and ck's cluster
+
                     float currentdis = calcdistance5d(centerPixel->x, centerPixel->y, i, j, imgLABspace, param, S);
                     if (distance.atChannel(j, i, 0) > currentdis)
                     {
-                        if (distance.atChannel(j, i, 1) == centerPixel->getId())
-                        {
-                            // Already in the correct place we simply update the distance late
-                            // May not even happend once ?...
-                            // TODO Verify the usefulness of this
-                        }
+#pragma omp critical
 
-                        else if (distance.atChannel(j, i, 0) == std::numeric_limits<float>::infinity())
+                        if (distance.atChannel(j, i, 0) == std::numeric_limits<float>::infinity())
                         {
                             distance.atChannel(j, i, 1) = centerPixel->getId();
-                            vectorOfMaps[centerPixel->getId()][std::make_pair(j, i)] = std::make_pair(j, i);
+                            // vectorOfMaps[centerPixel->getId()][std::make_pair(j, i)] = std::make_pair(j, i);
+                            vectorOfMaps[centerPixel->getId()][slicMapPair(j, i)] = slicMapPair(j, i);
                         }
 
                         else if ((distance.atChannel(j, i, 0) != std::numeric_limits<float>::infinity()) &&
@@ -802,8 +838,11 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
                             // Control the Connectivity betwwen the analysed cluster and the pixel
 
                             distance.atChannel(j, i, 1) = centerPixel->getId();
-                            vectorOfMaps[id].erase(std::make_pair(j, i));
-                            vectorOfMaps[centerPixel->getId()][std::make_pair(j, i)] = std::make_pair(j, i);
+                            // vectorOfMaps[id].erase(std::make_pair(j, i));
+                            vectorOfMaps[id].erase(slicMapPair(j, i));
+
+                            // vectorOfMaps[centerPixel->getId()][std::make_pair(j, i)] = std::make_pair(j, i);
+                            vectorOfMaps[centerPixel->getId()][slicMapPair(j, i)] = slicMapPair(j, i);
                         }
                         distance.atChannel(j, i, 0) = currentdis;
                     }
@@ -811,17 +850,9 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
             }
         }
 
-        auto enda = std::chrono::high_resolution_clock::now();
-
         // Calculate the duration
-        std::chrono::duration<double> durationa = enda - starta;
 
         // Output the result in seconds
-        std::cout << "Execution time A: " << durationa.count() << " seconds" << std::endl;
-
-        std::cout << "Execution timeB: " << std::endl;
-
-        auto startb = std::chrono::high_resolution_clock::now();
 
         for (std::shared_ptr<Pixl> &centerPixel : supapixllist)
         {
@@ -844,16 +875,9 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
             centerPixel->y = newy;
         }
 
-        // No indication about the calculation of the residual error so we take 10 since it usually converge by 10
-        std::cout << "newtE ? " << supapixllist.size() << std::endl;
-
-        auto endb = std::chrono::high_resolution_clock::now();
-
         // Calculate the duration
-        std::chrono::duration<double> durationb = endb - startb;
 
         // Output the result in seconds
-        std::cout << "Execution time: " << durationb.count() << " seconds" << std::endl;
 
         E++;
     }
@@ -876,24 +900,18 @@ void SlicAlgorithm(/*const char* datapath*/ std::vector<Region> &regions, const 
 {
     // Clean the regions variable
     regions.clear();
-    regions.shrink_to_fit();
 
     std::vector<std::shared_ptr<Pixl>> superPixelCenter = selectSuperpixelCenter(image, regions, param.m_K);
+
     std::chrono::milliseconds durationa;
 
-    std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+    auto start = std::chrono::high_resolution_clock::now();
     moveCenterGradBased(image, superPixelCenter, param.m_labparam);
 
-    // std::cout<<regions.size() << " " << image.getRows() *image.getCols() << " "  <<
-    // displayRandCol.getRows() *displayRandCol.getCols()<<std::endl;
-
-    /*std::cout<<regions.size() << " " << image.getRows() *image.getCols() << " "  <<
- dffd.getRows() *dffd.getCols()<<std::endl;*/
     SLICAssignmentStep(image, superPixelCenter, regions, param);
-
-    std::chrono::high_resolution_clock::time_point stop = std::chrono::high_resolution_clock::now();
+    auto stop = std::chrono::high_resolution_clock::now();
     durationa = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-    std::cout << "duration of SLIC operation is :" << durationa.count();
+    std::cout << "Duration of the entire operation was :" << durationa.count();
 }
 
 void testSlic();

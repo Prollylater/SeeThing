@@ -57,20 +57,21 @@ void ShowSlicParameter(bool &show, GLuint &tex)
     {
         SlicParameter executeparam(c_pix_k, compactness_m, lah_div_str, xyz_current_idx,
                                    div);
-        // TODO GEt active layver
+
         Mat<uint8_t> &activeim = appobj::canvas.getLayer(0).getImage();
 
-        std::cout << c_pix_k << std::endl;
+        std::cout << "Image Stored in Mat, dispatching with parameter: " << std::endl;
+
+        std::cout<< c_pix_k << std::endl;
         std::cout << compactness_m << std::endl;
         std::cout << lah_div_str << std::endl;
         std::cout << div << std::endl;
+        std::cout << "Dispatching" << std::endl;
 
         Mat<uint8_t>
             regiongrow = appobj::rgengine.dispatch(executeparam, activeim, coloration_current_idx);
         // TODO Dispatch should take care of this ?
         appobj::glengine.outputText(regiongrow, &tex);
-
-        // DispatchpRegionGrowing
     };
     ImGui::SameLine();
     if (ImGui::Button("Default Param"))
@@ -176,7 +177,7 @@ void ShowSeedParameter(bool &show, GLuint &tex)
     if (ImGui::Button("Execute"))
     {
         // DispatchpRegionGrowing
-        std::cout << "sdsd" << std::endl;
+        std::cout << "Starting Kmeans Execution" << std::endl;
 
         SeedRGParameter executeparam(threshold, adapt_perc, seednb, funct_current_idx, random, divide, adaptive);
         // TODO GEt active layver
@@ -184,6 +185,8 @@ void ShowSeedParameter(bool &show, GLuint &tex)
 
         Mat<uint8_t>
             regiongrow = appobj::rgengine.dispatch(executeparam, activeim, coloration_current_idx);
+        std::cout << "Region Growing done" << std::endl;
+        
         // TODO Dispatch should take care of this ?
         appobj::glengine.outputText(regiongrow, &tex);
     };
@@ -345,7 +348,7 @@ void ShowRegionGrowingArea()
         if (display != 0)
         {
             result_display = true;
-            //TODO: Directly use globalstates enum
+            // TODO: Directly use globalstates enum
             ShowGenDisplayPanel(result_display, display);
         }
     }

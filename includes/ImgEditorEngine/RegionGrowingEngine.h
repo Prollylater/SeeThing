@@ -19,7 +19,7 @@ class RGEngine
 private:
     // Hold last streated region in
     // Needed to implement quick modification
-    //TODO ; regions is cleared by the region growing algorithm.
+    // TODO ; regions is cleared by the region growing algorithm.
     // WHich is pretty bad
     std::vector<Region> regions;
 
@@ -28,19 +28,17 @@ public:
     {
 
         SlicAlgorithm(regions, image, exec_param);
-        // TODO LEt the choice to have different color
         return output(coloration, image);
     }
 
     Mat<uint8_t> dispatch(const SeedRGParameter &exec_param, const Mat<uint8_t> &image, int coloration)
-    { 
-            std::cout << "Predsis" << std::endl;
+    {
 
         std::queue<std::shared_ptr<Pixl>> seedlist;
         // if( m_random){}
         if (exec_param.m_random)
         {
-            std::cout << "GErms selection" << std::endl;
+            std::cout << "Germs selection" << std::endl;
 
             if (exec_param.m_divide)
             {
@@ -51,14 +49,13 @@ public:
 
                 seedlist = putGerms(image, regions, exec_param.m_seednb);
             }
-
         }
         // TODO, implement user germs selection
         else
         {
             std::cout << "User Selection is nott implemented" << std::endl;
         }
-            std::cout << "RegionALg" << std::endl;
+        std::cout << "RegionALg" << std::endl;
 
         Mat<uint32_t> visited(image.getRows(), image.getCols(), 1); // Doesn't need to exist here
 
@@ -71,7 +68,7 @@ public:
             adaptiveRegionGrowing(image, seedlist, exec_param.m_threshold, visited, regions, exec_param.m_adaptation);
         }
 
-            std::cout << "Fusing" << std::endl;
+        std::cout << "Fusing" << std::endl;
 
         fuseRegions(regions, exec_param.m_threshold);
 
@@ -89,13 +86,12 @@ public:
         case 0:
             return composeSegRandCol(image, regions);
         case 1:
-            // Don't work
             return composeSegMeanColor(image, regions);
         case 2:
             return composeSegMean(image, regions);
+        default:
+            return composeSegMeanColor(image, regions);
         }
-        Mat<uint8_t> dud;
-        return dud;
     }
 };
 

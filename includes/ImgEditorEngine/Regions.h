@@ -96,7 +96,6 @@ public:
     Vec<T> computeColorIntensity(const Mat<T> &image) const;
     Vec<uint8_t> computeColorIntensity(const Mat<uint8_t> &image) const;
 
-
     void fuse(Region *fusedin);
 
     void empty();
@@ -180,12 +179,15 @@ using rgsCompFuncVar = std::variant<CompPixPix, CompPixRegions>;
 template <typename T>
 float getIntensity(const std::shared_ptr<Pixl> current,
                    const Mat<T> &image)
-{ // TODO PATCH here
+{
     float intensity = 0;
+    if (current->x < 0 || current->y < 0 || current->x >= image.getCols() || current->y >= image.getRows())
+    {
+        return intensity;
+    }
     if (image.getChannels() > 2)
     {
         Vec<T> currentintensity = image.atVec(current->y, current->x);
-
         // L'intensité prend en compte les trois couleurs
         intensity = static_cast<float>(currentintensity.sumComponents() / 3);
     }
@@ -193,10 +195,10 @@ float getIntensity(const std::shared_ptr<Pixl> current,
     {
 
         T currentintensity = image.atChannel(current->y, current->x, 0);
-        // L'intisité prend en compte la seule valeur présente
+        // L'intensité prend en compte la seule valeur présente
         intensity = static_cast<float>(currentintensity); // favs
     }
-    return (intensity);
+    return intensity;
 }
 
 template <typename T>
@@ -214,12 +216,16 @@ inline Vec<T> getPixlColor(const std::shared_ptr<Pixl> current,
 template <typename T>
 void Region::addGerm(std::shared_ptr<Pixl> &pixeluptr, const Mat<T> &img)
 {
+    if (!pixeluptr)
+    {
+        std::cerr << "Error: Invalid pixel pointer!" << std::endl;
+        return;
+    }
 
     float tmpmean = currentMeanIntensity * pixels.size();
     tmpmean += getIntensity(pixeluptr, img);
 
     pixels.push_back(std::move(pixeluptr));
-
     currentMeanIntensity = tmpmean / pixels.size();
 }
 
@@ -235,9 +241,9 @@ float Region::recomputeMeanIntensity(const Mat<T> &image)
     return sumIntensity / pixels.size();
 }
 
-//Work and int, not so much with a type as limited as uint_8
-//Or divide ach time
-// TODO Rethink those function and 
+// Work and int, not so much with a type as limited as uint_8
+// Or divide ach time
+//  TODO Rethink those function and
 template <typename T>
 Vec<T> Region::computeColorIntensity(const Mat<T> &image) const
 {
@@ -252,10 +258,6 @@ Vec<T> Region::computeColorIntensity(const Mat<T> &image) const
 
     return sumIntensity;
 }
-
-
-
-
 
 template <typename T>
 bool isSimilarColorAverage(const Mat<T> &bgrImage, const Region &region1,
