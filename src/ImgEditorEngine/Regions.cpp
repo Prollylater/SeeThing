@@ -155,11 +155,10 @@ void Region::setFused()
 
 void fuseRegions(std::vector<Region> &regions, float threshold)
 {
-	int index = 0;
 	std::vector<Region *> newregionsbuffer;
 	// Fuse the current region with the region of the visited pixel
 	// for (Region &regionA : regions)
-	for (int i = 0; i < regions.size(); ++i)
+	for (size_t i = 0; i < regions.size(); ++i)
 	{
 
 		// If it was fused at somepoint
@@ -171,7 +170,7 @@ void fuseRegions(std::vector<Region> &regions, float threshold)
 		}
 		// Loop through all the adjacent regions
 		// Possible index invalidation
-		for (int j = 0; j < regions[i].adjacentregions.size(); ++j)
+		for (size_t j = 0; j < regions[i].adjacentregions.size(); ++j)
 		{
 			Region *reg = regions[i].adjacentregions[j];
 			// If already fused

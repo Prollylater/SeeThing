@@ -65,7 +65,7 @@ namespace OpenGlContext
         }
         // Set the callback function for window resize
 
-        glfwSetFramebufferSizeCallback(window, [](GLFWwindow *window, int width, int height)
+        glfwSetFramebufferSizeCallback(window, [](GLFWwindow *, int width, int height)
                                        { glViewport(0, 0, width, height); });
 
         //(VSync)

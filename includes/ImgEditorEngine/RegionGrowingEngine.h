@@ -75,10 +75,6 @@ public:
         return output(coloration, image);
     }
 
-    void dispatch(const SeedRGParameter &exec_param, const Mat<uint8_t> &image)
-    {
-    }
-
     Mat<uint8_t> output(int color, const Mat<uint8_t> &image)
     {
         switch (color)

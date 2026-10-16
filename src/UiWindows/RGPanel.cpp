@@ -261,7 +261,6 @@ void ShowRegionGrowingArea()
         // Calculation to center child window
 
         ImVec2 parent_size = ImGui::GetWindowSize();
-        ImVec2 parent_pos = ImGui::GetWindowPos();
         ImGui::Separator();
         ImGui::Spacing();
         ImGui::Spacing();

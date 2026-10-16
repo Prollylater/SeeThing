@@ -251,7 +251,7 @@ Mat<T>::Mat() : data(nullptr), rows(0), cols(0), channels(0), clrspace(PixlColor
                                                                   // std::cout << "Creared fro noth" << std::endl;
                                                               };
 template <typename T>
-Mat<T>::Mat(int _rows, int _cols, int _channels, PixlColorSpace _clrspace) : rows(_rows), cols(_cols), channels(_channels), clrspace(_clrspace), data(nullptr)
+Mat<T>::Mat(int _rows, int _cols, int _channels, PixlColorSpace _clrspace) : data(nullptr), rows(_rows), cols(_cols), channels(_channels), clrspace(_clrspace)
 {
     // std::cout << "Creared rows shit" << std::endl;
     data = new T[rows * cols * channels];
@@ -879,7 +879,6 @@ template <typename T>
 inline Mat<T> operator*(const Mat<T> &Mata, const Mat<T> &Matb)
 {
     int channels = Mata.channels;
-    int rows = Mata.rows;
     int cols = Mata.cols;
 
     if (channels != Matb.channels || cols != Matb.rows)
@@ -1080,7 +1079,6 @@ void Mat<T>::toLabSpace(const LabParam &conv_param)
 
     int idref = conv_param.m_XYZconv;
     float divide = conv_param.m_divbool ? conv_param.m_divstr : 1;
-    int delta;
     switch (clrspace)
     {
     case PixlColorSpace::BGR:

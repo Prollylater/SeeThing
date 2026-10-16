@@ -785,7 +785,7 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
     std::vector<ClustersMap> vectorOfMaps;
     int S = std::sqrt(imgsize / param.m_K);
 
-    for (int i = 0; i < supapixllist.size(); ++i)
+    for (size_t i = 0; i < supapixllist.size(); ++i)
     {
         ClustersMap map;
         vectorOfMaps.push_back(map);

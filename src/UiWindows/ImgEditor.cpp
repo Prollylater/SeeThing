@@ -13,8 +13,6 @@ void ShowImageRenderingArea()
     // create a file browser instance
     static ImGui::FileBrowser fileDialog;
 
-    // Temporary value created to allow the use of show
-    bool show = win_states.isTrue(WinStates::img_area);
     /*static float f;
          ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
                            ImGui::ColorEdit3("clear color", (float*)&color_pencil);
@@ -213,7 +211,8 @@ void ShowImageRenderingArea()
 
 // Pass pt_size and add button for selectting pixel size
 
-void handleClrPencil(ImVec2 windows_pos, ImVec2 windows_size, int img_w, int img_h, ImVec4 color)
+// windows_size unused: hits are tested against the image size, not the visible view
+void handleClrPencil(ImVec2 windows_pos, [[maybe_unused]] ImVec2 windows_size, int img_w, int img_h, ImVec4 color)
 {
     // COuld be GLINT instead of float
     static std::set<Vec<GLfloat>> positions;

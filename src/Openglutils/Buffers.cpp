@@ -138,9 +138,9 @@ void useFbo(GLuint fbo)
 void attachFbo(GLuint fbo, TextureResource &texress)
 {
 
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texress.texture_id, 0);
+    glNamedFramebufferTexture(fbo, GL_COLOR_ATTACHMENT0, texress.texture_id, 0);
 
-    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    GLenum status = glCheckNamedFramebufferStatus(fbo, GL_FRAMEBUFFER);
     if (status != GL_FRAMEBUFFER_COMPLETE)
     {
         switch (status)

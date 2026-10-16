@@ -16,12 +16,11 @@ Mat<uint8_t> loadImg(const char *imagePath, bool flip, int nbchan)
     uint8_t *image = stbi_load(imagePath, &width, &height, &channels, nbchan);
     if (!image)
     {
-        std::cerr << "Error in opening the image " << imagePath << std::endl;
+        std::cerr << "Error in opening the image " << imagePath << ": " << stbi_failure_reason() << std::endl;
+        return Mat<uint8_t>();
     }
-    size_t size = sizeof(image) / sizeof(image[0]);
-    std::vector<unsigned char> vecImg(image, image + size);
 
-    int final_chan = nbchan ? (nbchan != 0) : channels;
+    int final_chan = nbchan ? nbchan : channels;
     Mat<unsigned char> imgMat(image, height, width, final_chan);
     // Considered channel is the desired number, not the actual number
     // Mat<unsigned char> imgMat(image,height, width, nbchan) ;

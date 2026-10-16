@@ -60,7 +60,7 @@
             }
             ImGui::Separator();
 
-            if (ImGui::MenuItem("Close", NULL, false, p_open != NULL))
+            if (ImGui::MenuItem("Close", NULL, false))
                 p_open = false;
             ImGui::EndMenu();
         }

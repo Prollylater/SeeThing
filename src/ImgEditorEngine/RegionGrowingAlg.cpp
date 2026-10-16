@@ -96,9 +96,6 @@ Mat<uint8_t> composeSegRandCol(const Mat<uint8_t> &src, const std::vector<Region
     std::shuffle(colorB.begin(), colorB.end(), gen);
     std::shuffle(colorG.begin(), colorG.end(), gen);
     std::shuffle(colorR.begin(), colorR.end(), gen);
-    int a = src.getRows();
-    int b = src.getCols();
-    int c = src.getRows();
 
 
     for (const Region &region : regions)

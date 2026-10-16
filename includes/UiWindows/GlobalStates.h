@@ -33,10 +33,6 @@ class WinStatesHandler
 {
 private:
     std::unordered_map<WinStates, bool> m_states;
-    void resolveDependencies(WinStates &states)
-    {
-        // Currently don't do anyyhing
-    }
 
 public:
     WinStatesHandler()
@@ -52,13 +48,11 @@ public:
     void invState(WinStates state)
     {
         m_states.at(state) = !m_states.at(state);
-        resolveDependencies(state);
     }
 
     void setState(WinStates state, bool val)
     {
         m_states.at(state) = val;
-        resolveDependencies(state);
     }
 
 
@@ -149,10 +143,6 @@ class RGStatesHandler
 {
 private:
     std::unordered_map<RGStates, bool> m_states;
-    void resolveDependencies(RGStates &states)
-    {
-        // Currently don't do anyyhing
-    }
 
 public:
     RGStatesHandler()
@@ -168,13 +158,11 @@ public:
     void invState(RGStates state)
     {
         m_states.at(state) = !m_states.at(state);
-        resolveDependencies(state);
     }
 
     void setState(RGStates state, bool val)
     {
         m_states.at(state) = val;
-        resolveDependencies(state);
     }
 
     bool isTrue(RGStates state)

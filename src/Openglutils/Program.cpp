@@ -179,15 +179,13 @@ void Program::addUniform2(const char *uniform, const Vec<GLuint> &value)
 
 void Program::addUniform3(const char *uniform, const Vec<GLfloat> &value)
 {
-    GLenum error = glGetError();
-
     GLint location = glGetUniformLocation(shader_id, uniform);
 
     if (location == -1)
     {
         std::cerr << "Uniform " << uniform << " not found in shader." << std::endl;
     }
-    glUniform3fv(glGetUniformLocation(shader_id, uniform), 1, &value.x);
+    glUniform3fv(location, 1, &value.x);
 }
 
 void Program::addUniform3(const char *uniform, const Vec<GLuint> &value)
