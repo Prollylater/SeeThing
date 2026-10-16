@@ -245,10 +245,11 @@ bool isSimilarEucDist(const Mat<uint8_t> &bgrImage,
 					  const std::shared_ptr<Pixl> &neighbor, float threshold)
 {
 	// TODO Test
-	Vec<uint8_t> tmpa = bgrImage.atVec(current->y, current->x);
-	Vec<uint8_t> tmpb = bgrImage.atVec(current->y, current->x);
+	// Float, so the difference can go negative instead of wrapping
+	Vec<float> tmpa = bgrImage.atVec(current->y, current->x).template convertDt<float>();
+	Vec<float> tmpb = bgrImage.atVec(neighbor->y, neighbor->x).template convertDt<float>();
 
-	Vec<uint8_t> eucldist = tmpa - tmpb;
+	Vec<float> eucldist = tmpa - tmpb;
 	// Compare the intensity difference with the threshold ou
 
 	return (Magn(eucldist) <= (threshold));

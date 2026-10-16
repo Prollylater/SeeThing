@@ -26,8 +26,10 @@ void ShowSlicParameter(bool &show, GLuint &tex)
     // Spatial Coherence
 
     // TODO Add description
-    const char *items[] = {"A2", "B2", "D50_2", "D55_2", "D65_2", "D75_2", "E_2", "F1_2"};
-    static int xyz_current_idx = 0;
+    // Same order as XYZRefHandle and XYZrefs in Mat.h
+    const char *items[] = {"A2", "B2", "C2", "D50_2", "D55_2", "D65_2", "D75_2", "E_2", "F1_2"};
+    static_assert(IM_ARRAYSIZE(items) == IM_ARRAYSIZE(XYZrefs), "illuminant labels out of sync with XYZrefs");
+    static int xyz_current_idx = D65_2;
     const char *combo_preview_value = items[xyz_current_idx];
 
     if (ImGui::BeginCombo("XYZ_Ref", combo_preview_value, ImGuiComboFlags_WidthFitPreview))
@@ -82,7 +84,7 @@ void ShowSlicParameter(bool &show, GLuint &tex)
         c_pix_k = 100;
         lah_div_str = 1;
         compactness_m = 20;
-        xyz_current_idx = 0;
+        xyz_current_idx = D65_2;
         coloration_current_idx = 0;
     };
 
@@ -145,8 +147,10 @@ void ShowSeedParameter(bool &show, GLuint &tex)
 
  */
     ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.4f, 1.0f), "Comparison Algorithm");
-    const char *comp_func[] = {"Seed's color Intensity", "Seed's Euclidian distance",
-                               "Region's color intensity", "Region's luminance"};
+    // Same order as rgs_comp_func_var in RegionGrowingAlg.h
+    const char *comp_func[] = {"Seed's color Intensity", "Region's color intensity",
+                               "Region's luminance", "Seed's Euclidian distance"};
+    static_assert(IM_ARRAYSIZE(comp_func) == RG_FUNCT_NB, "comparison labels out of sync with rgs_comp_func_var");
     static int funct_current_idx = 0;
     const char *combo_preview_value = comp_func[funct_current_idx];
 

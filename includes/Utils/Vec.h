@@ -149,9 +149,14 @@ struct Vec
     return (x < vec.x) || ((x == vec.x) && ((y < vec.y) || ((y == vec.y) && (z < vec.z))));
   }
 
+  bool operator==(const Vec<T> &vec) const
+  {
+    return (x == vec.x) && (y == vec.y) && (z == vec.z);
+  }
+
   bool operator!=(const Vec<T> &vec) const
   {
-    return (x != vec.x) && (y != vec.y) && (z != vec.z);
+    return !(*this == vec);
   }
 
   friend std::ostream &operator<<(std::ostream &os, const Vec<T> &vec)
@@ -221,9 +226,9 @@ Vec<T> Norm(const Vec<T> &vec)
 template <typename T>
 Vec<T> &Vec<T>::operator*=(const T &scalar)
 {
-  x /= scalar;
-  y /= scalar;
-  z /= scalar;
+  x *= scalar;
+  y *= scalar;
+  z *= scalar;
   return *this;
 }
 // Addition
