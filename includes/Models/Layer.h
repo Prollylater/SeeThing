@@ -1,3 +1,5 @@
+#ifndef LAYER_H
+#define LAYER_H
 #include <cstdint>
 #include <utility>
 #include "Mat.h"
@@ -41,3 +43,5 @@ public:
     // private
     Mat<uint8_t> image;
 };
+
+#endif

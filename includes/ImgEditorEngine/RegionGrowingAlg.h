@@ -765,7 +765,9 @@ struct slicMapPair
         }
     };
 };
-#include "omp.h"
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 // TODO Enforce spatial connectivity
 // Replace std::map and pair ?
 template <typename T>
@@ -803,7 +805,9 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
         std::cout << "Execution time: A " << std::endl;
 
         // For each cluster center ck
+#ifdef _OPENMP
 #pragma omp parallel for
+#endif
 
         for (std::shared_ptr<Pixl> &centerPixel : supapixllist)
         {
@@ -822,7 +826,9 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
                     float currentdis = calcdistance5d(centerPixel->x, centerPixel->y, i, j, imgLABspace, param, S);
                     if (distance.atChannel(j, i, 0) > currentdis)
                     {
+#ifdef _OPENMP
 #pragma omp critical
+#endif
 
                         if (distance.atChannel(j, i, 0) == std::numeric_limits<float>::infinity())
                         {

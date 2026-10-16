@@ -1,3 +1,5 @@
+#ifndef RGPANEL_H
+#define RGPANEL_H
 #include "glcore.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -12,3 +14,4 @@ void ShowSeedParameter(bool &show , GLuint& tex);
 
 void ShowRegionGrowingArea();
 
+#endif

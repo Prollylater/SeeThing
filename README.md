@@ -18,10 +18,12 @@ The project is an OpenGL-based application utilizing ImGui for the graphical use
 ## Prerequisites
 
 Before building and running the application, make sure you have the following software installed:
-- **CMake** 
-- **GLEW** 
+- **CMake** 3.16 or higher
+- A **C++17** compiler (GCC, Clang or MSVC)
+- **GLEW**
+- **GLFW** 3
 - **OpenGL** (version 3.3 or higher)
-- **GLFW** 
+- **OpenMP** (optional: SLIC uses it when found)
 
 ## Building and Running the Project
 
@@ -30,23 +32,20 @@ To build the project, follow these steps:
 1. **Clone the repository:**
    ```bash
    git clone https://github.com/Prollylater/SeeThing.git
-   cd
-2. Install dependency
-   **GLFW:**
-   -Use your favorite package manager or any method you prefer. Or:
-     ```bash
-     sudo apt install libglfw3-dev
-     ```
-   **CMAKE:**
-     ```bash
-      sudo apt install cmake
-     ```
-3. Building and running
-    ```bash
-      mkdir build
-      cd build
-      cmake ..
-      make
-    ```
+   cd SeeThing
+   ```
+2. **Install the dependencies** (Debian/Ubuntu shown; use your package manager otherwise):
+   ```bash
+   sudo apt install build-essential cmake libglew-dev libglfw3-dev
+   ```
+3. **Build and run:**
+   ```bash
+   cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+   cmake --build build -j
+   ./build/seething
+   ```
+   Every build copies `ressources/` next to the executable, so it runs from any folder.
+   To load shaders and fonts from somewhere else, set `SEETHING_ASSET_DIR`, for example
+   `SEETHING_ASSET_DIR=$PWD/ressources ./build/seething`.
 
 ![image](https://github.com/user-attachments/assets/33926deb-2afa-4857-ac03-36b3907d4e49)

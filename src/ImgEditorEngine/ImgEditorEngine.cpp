@@ -1,4 +1,5 @@
 #include "ImgEditorEngine.h"
+#include "AssetPath.h"
 
 // Define instance of the app object which each correspond to a feature
 namespace appobj
@@ -54,8 +55,8 @@ bool OpenGLEngine::initImrender()
     loadedvao = createBuffers(canvas, indices, canvastext);
     // TODO Array of shader for each change
     // Built once, never per draw call
-    prog.init("./ressources/shaders/imgoutput.vs", "./ressources/shaders/imgoutput.fs");
-    prog_colchange.init("./ressources/shaders/colchange.vs", "./ressources/shaders/colchange.fs");
+    prog.init(assetPath("shaders/imgoutput.vs").c_str(), assetPath("shaders/imgoutput.fs").c_str());
+    prog_colchange.init(assetPath("shaders/colchange.vs").c_str(), assetPath("shaders/colchange.fs").c_str());
 
     return true;
 }

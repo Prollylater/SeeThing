@@ -1,5 +1,6 @@
 
 #include "UiCompUtils.h"
+#include "AssetPath.h"
 
 void ShowColorPicker(bool &show, ImVec4 &color)
 {
@@ -34,7 +35,7 @@ void SetupImGuiFonts()
     config.GlyphMinAdvanceX = 14.0f;
 
     // Load the icon font and merge it
-    io.Fonts->AddFontFromFileTTF("./ressources/fonts/codicon.ttf", 16.0f, &config, icon_ranges);
+    io.Fonts->AddFontFromFileTTF(assetPath("fonts/codicon.ttf").c_str(), 16.0f, &config, icon_ranges);
 
     // Build the font atlas
     io.Fonts->Build();

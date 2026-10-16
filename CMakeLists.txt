@@ -1,10 +1,5 @@
-#TODO Refine CmakeList
-
-cmake_minimum_required(VERSION 3.8)
-project(MyImgEditor LANGUAGES CXX)
-
-#set(CMAKE_CXX_STANDARD 17)
-#set(CMAKE_CXX_STANDARD_REQUIRED True)
+cmake_minimum_required(VERSION 3.16)
+project(SeeThing LANGUAGES CXX)
 
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
@@ -17,7 +12,30 @@ set(SOURCE_DIR  src)
 set(INCLUDE_DIR includes)
 
 
-# altrnative file(GLOB PROJECT_SRC "*.cpp")
+# Vendored Dear ImGui, built apart so the project's warning flags don't apply to it
+add_library(imgui STATIC
+    ${INCLUDE_DIR}/Imgui/imgui.cpp
+    ${INCLUDE_DIR}/Imgui/imgui_demo.cpp
+    ${INCLUDE_DIR}/Imgui/imgui_draw.cpp
+    ${INCLUDE_DIR}/Imgui/imgui_tables.cpp
+    ${INCLUDE_DIR}/Imgui/imgui_widgets.cpp
+    ${INCLUDE_DIR}/Imgui/backends/imgui_impl_glfw.cpp
+    ${INCLUDE_DIR}/Imgui/backends/imgui_impl_opengl3.cpp
+)
+target_include_directories(imgui SYSTEM PUBLIC
+    ${INCLUDE_DIR}/Imgui
+    ${INCLUDE_DIR}/Imgui/backends
+)
+target_link_libraries(imgui PUBLIC glfw OpenGL::GL ${CMAKE_DL_LIBS})
+
+
+add_library(seething_warnings INTERFACE)
+target_compile_options(seething_warnings INTERFACE
+    "$<$<CXX_COMPILER_ID:MSVC>:/W4>"
+    "$<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall;-Wextra>"
+)
+
+
 set(PROJECT_SRC
     #Core
     ${SOURCE_DIR}/main.cpp
@@ -42,91 +60,41 @@ set(PROJECT_SRC
     ${SOURCE_DIR}/UiWindows/UiCompUtils.cpp
     ${SOURCE_DIR}/UiWindows/GlobalStates.cpp
     #Utils
+    ${SOURCE_DIR}/Utils/AssetPath.cpp
     ${SOURCE_DIR}/Utils/Imloader.cpp
     ${SOURCE_DIR}/Utils/Mat.cpp
     ${SOURCE_DIR}/Utils/Helper.cpp
-   
-   #Imgui
-    ${INCLUDE_DIR}/Imgui/imgui.cpp
-    ${INCLUDE_DIR}/Imgui/backends/imgui_impl_glfw.cpp    
-    ${INCLUDE_DIR}/Imgui/backends/imgui_impl_opengl3.cpp
-    ${INCLUDE_DIR}/Imgui/imgui_demo.cpp
-    ${INCLUDE_DIR}/Imgui/imgui_draw.cpp
-    ${INCLUDE_DIR}/Imgui/imgui_tables.cpp
-    ${INCLUDE_DIR}/Imgui/imgui_widgets.cpp
-
-
 )
 
-
-# altrnative file(GLOB INCLUDES_DIRS "*.h")
-set(INCLUDES_DIRS 
-   
+set(INCLUDES_DIRS
     ${INCLUDE_DIR}
-    ${INCLUDE_DIR}/3rdParty
-    
-    #Models
-     ${INCLUDE_DIR}/Models
-    
+    ${INCLUDE_DIR}/Models
     ${INCLUDE_DIR}/ImgEditorEngine
-    #Core
     ${INCLUDE_DIR}/Core
-    #Openglutils
     ${INCLUDE_DIR}/Openglutils
-    #RenderContext
     ${INCLUDE_DIR}/RenderContext
-    #UiWindows
     ${INCLUDE_DIR}/UiWindows
-    #Utils
     ${INCLUDE_DIR}/Utils
-   
-   
-    #Imgui
-    ${INCLUDE_DIR}/Imgui/
-    ${INCLUDE_DIR}/Imgui/backends
-    
-
 )
 
 
-
-
-file(COPY ressources DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-
-
-# Add executable
-add_executable(test ${PROJECT_SRC})
-
-
-
-# Include directories
-target_include_directories(test PUBLIC 
-    ${INCLUDES_DIRS}   
-)
-
-
-# Link libraries
-set(LINK_LIBS
-    ${OPENGL_LIBRARIES}
-    ${GLEW_LIBRARIES}
-    glfw
-)
+add_executable(seething ${PROJECT_SRC})
+target_compile_features(seething PRIVATE cxx_std_17)
+target_include_directories(seething PRIVATE ${INCLUDES_DIRS})
+target_include_directories(seething SYSTEM PRIVATE ${INCLUDE_DIR}/3rdParty)
+target_link_libraries(seething PRIVATE imgui GLEW::GLEW glfw OpenGL::GL seething_warnings)
 
 if(OpenMP_CXX_FOUND)
-    # Link OpenMP if found
-    list(APPEND LINK_LIBS OpenMP::OpenMP_CXX)
+    target_link_libraries(seething PRIVATE OpenMP::OpenMP_CXX)
     message(STATUS "OpenMP found and linked to the project.")
 else()
-    # Print a message if OpenMP is not found
-    message(WARNING "OpenMP was not found.")
+    message(STATUS "OpenMP not found: SLIC runs on one thread.")
 endif()
 
 
-target_link_libraries(test ${LINK_LIBS})
-
-
-
-
-
-
-
+# Runs on every build, so edited shaders and fonts are picked up without re-running CMake
+add_custom_target(seething_resources ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_CURRENT_SOURCE_DIR}/ressources $<TARGET_FILE_DIR:seething>/ressources
+    COMMENT "Copying ressources/ next to the executable"
+)

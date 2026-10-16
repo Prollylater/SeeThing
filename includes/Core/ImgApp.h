@@ -1,3 +1,5 @@
+#ifndef IMGAPP_H
+#define IMGAPP_H
 #include "OpenGLContext.h"
 #include "ImGuiAppContext.h"
 
@@ -14,3 +16,5 @@ public:
   void quit();
 
 };
+
+#endif
