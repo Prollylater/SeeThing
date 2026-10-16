@@ -53,6 +53,7 @@ void ShowSlicParameter(bool &show, GLuint &tex)
     ImGui::Checkbox("Default Div", &div);
 
     // Dispatch the Result
+    ImGui::BeginDisabled(appobj::canvas.getLayerNb() == 0);
     if (ImGui::Button("Execute"))
     {
         SlicParameter executeparam(c_pix_k, compactness_m, lah_div_str, xyz_current_idx,
@@ -71,8 +72,10 @@ void ShowSlicParameter(bool &show, GLuint &tex)
         Mat<uint8_t>
             regiongrow = appobj::rgengine.dispatch(executeparam, activeim, coloration_current_idx);
         // TODO Dispatch should take care of this ?
+        appobj::glengine.deleteTexture(tex);
         appobj::glengine.outputText(regiongrow, &tex);
     };
+    ImGui::EndDisabled();
     ImGui::SameLine();
     if (ImGui::Button("Default Param"))
     {
@@ -165,15 +168,17 @@ void ShowSeedParameter(bool &show, GLuint &tex)
         }
         ImGui::EndCombo();
     }
-    if (ImGui::Checkbox("Adapative RG mode", &adaptive))
+    ImGui::Checkbox("Adapative RG mode", &adaptive);
+    if (adaptive)
     {
         ImGui::SliderFloat("Adaptive Percentage", &adapt_perc, 0.0f, 100.0f);
-    };
+    }
 
     ImGui::SliderFloat("Comparison Threshold", &threshold, 0.0f, 50.0f);
 
     // Dispatch the Result
 
+    ImGui::BeginDisabled(appobj::canvas.getLayerNb() == 0);
     if (ImGui::Button("Execute"))
     {
         // DispatchpRegionGrowing
@@ -188,8 +193,10 @@ void ShowSeedParameter(bool &show, GLuint &tex)
         std::cout << "Region Growing done" << std::endl;
         
         // TODO Dispatch should take care of this ?
+        appobj::glengine.deleteTexture(tex);
         appobj::glengine.outputText(regiongrow, &tex);
     };
+    ImGui::EndDisabled();
     ImGui::SameLine();
     if (ImGui::Button("Default Param"))
     {
@@ -231,6 +238,7 @@ void ShowSeedParameter(bool &show, GLuint &tex)
 void ShowRegionGrowingArea()
 {
     static GLuint display;
+    static bool result_display = false;
 
     bool show = win_states.isTrue(WinStates::rg_panel);
 
@@ -246,8 +254,6 @@ void ShowRegionGrowingArea()
 
     if (ImGui::Begin("Segmentation Mode", &show, window_flags))
     {
-        static bool result_display = false;
-
         // Calculation to center child window
 
         ImVec2 parent_size = ImGui::GetWindowSize();
@@ -272,6 +278,8 @@ void ShowRegionGrowingArea()
                 ImGui::SameLine();
             }
             std::string button_label = "Button " + std::to_string(i + 1);
+            // Two buttons share the same icon label
+            ImGui::PushID(i);
             if (ImGui::Button(icons[i]))
             {
                 switch (i)
@@ -305,6 +313,7 @@ void ShowRegionGrowingArea()
                 ImGui::Text("This is the description for %s", button_label.c_str());
                 ImGui::EndTooltip();
             }
+            ImGui::PopID();
         }
         ImGui::PopStyleVar();
 
@@ -344,13 +353,25 @@ void ShowRegionGrowingArea()
 
             break;
         }
-
-        if (display != 0)
-        {
-            result_display = true;
-            // TODO: Directly use globalstates enum
-            ShowGenDisplayPanel(result_display, display);
-        }
     }
     ImGui::End();
+
+    // Begin only wrote to the local copy
+    if (!show)
+    {
+        win_states.setState(WinStates::rg_panel, false);
+    }
+
+    // Own window, submitted outside the panel's Begin/End
+    if (display != 0)
+    {
+        result_display = true;
+        // TODO: Directly use globalstates enum
+        ShowGenDisplayPanel(result_display, display);
+        // Closing the viewer drops the result, like Reset
+        if (!result_display)
+        {
+            appobj::glengine.deleteTexture(display);
+        }
+    }
 }

@@ -26,13 +26,16 @@ Mat<uint8_t> composeSegMean(const Mat<uint8_t> &src, std::vector<Region> &region
     {
         if (region.getSizePix() > 0)
         {
+            const uint8_t mean = static_cast<uint8_t>(region.getMeanIntensity());
             for (const std::shared_ptr<Pixl> &pixelptr : region.pixels)
             {
-                resultMat.atChannel(pixelptr->y, pixelptr->x, 0) = static_cast<uint8_t>(region.getMeanIntensity());
+                for (int c = 0; c < resultMat.getChannels(); ++c)
+                {
+                    resultMat.atChannel(pixelptr->y, pixelptr->x, c) = mean;
+                }
             }
         }
     }
-    writeImgPng("./UEB1", resultMat, true);
 
     return resultMat;
 }
@@ -59,8 +62,6 @@ Mat<uint8_t> composeSegMeanColor(const Mat<uint8_t> &src, std::vector<Region> &r
         }
     }
     std::cout<<"INmea her" <<std::endl;
-    
-    writeImgPng("./UEB3", resultMat, true);
 
     return resultMat;
 }
@@ -114,8 +115,6 @@ Mat<uint8_t> composeSegRandCol(const Mat<uint8_t> &src, const std::vector<Region
             }
         }
     }
-
-    writeImgPng("./UEB22", resultMat, true);
 
     return resultMat;
 }

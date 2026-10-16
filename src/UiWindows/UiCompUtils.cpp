@@ -49,7 +49,7 @@ void ShowGenDisplayPanel(bool &show, GLuint &tex)
     }
     int width = appobj::canvas.getLayer(0).getWidth();
     int height = appobj::canvas.getLayer(0).getHeight();
-    if (ImGui::Begin("Segmentation Mode", &show))
+    if (ImGui::Begin("Segmentation Result", &show))
     {
         glBindTexture(GL_TEXTURE_2D, tex);
         ImGui::Image((ImTextureID)(intptr_t)tex, ImVec2(width, height), ImVec2(0, 1), ImVec2(1, 0));

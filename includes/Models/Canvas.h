@@ -14,8 +14,8 @@ public:
     Canvas(const Canvas &) = delete; 
     Canvas &operator=(const Canvas &) = delete;
     // Layer management
-    void addLayer(Layer &layers);
-    void addAtLayer(Layer &layer, int inde);
+    void addLayer(Layer layer);
+    void addAtLayer(Layer layer, int index);
     void removeLayer(int index);
     Layer &getLayer(int index);
     const Layer &getLayer(int index) const;

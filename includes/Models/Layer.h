@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <utility>
 #include "Mat.h"
 
 // You can access most thing here
@@ -7,46 +8,26 @@
 class Layer
 {
 public:
-    Layer()
-    {
-        image = Mat<uint8_t> (32,32,3);
-    }
-    Layer(Mat<uint8_t> &img)
-    {
-        image = img;
-    }
-    Layer(Mat<uint8_t> &&img)
-    {
-        image = img;
-    }
+    Layer() = default;
+    Layer(const Mat<uint8_t> &img) : image(img) {}
+    // img has a name here, so it must be moved explicitly
+    Layer(Mat<uint8_t> &&img) : image(std::move(img)) {}
 
     // Methods to get and set pixel data
     // Color getPixel(int x, int y) const;
     // void setPixel(int x, int y);
     int getSize()
     {
-        if (&image == nullptr)
-        {
-            return 0;
-        }
         return image.getCols() * image.getRows();
     }
 
     int getWidth()
     {
-        if (&image == nullptr)
-        {
-            return 0;
-        }
         return image.getCols();
     }
 
     int getHeight()
     {
-        if (&image == nullptr)
-        {
-            return 0;
-        }
         return image.getRows();
     }
 

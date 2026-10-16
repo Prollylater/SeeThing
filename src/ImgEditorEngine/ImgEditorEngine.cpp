@@ -165,14 +165,14 @@ bool OpenGLEngine::outputImg(const char *datapath, GLuint *out_texture, int *out
 
     Layer new_img(std::move(tmpmat));
 
-    // Currently only deal with the layer 0
+    // Currently only deal with the layer 0: replace it, don't stack a new one
     if (appobj::canvas.getLayerNb() > 0)
     {
-        appobj::canvas.addAtLayer(new_img, 0);
+        appobj::canvas.getLayer(0) = std::move(new_img);
     }
     else
     {
-        appobj::canvas.addLayer(new_img);
+        appobj::canvas.addLayer(std::move(new_img));
     }
 
     // TODO Canvas set up Should not be handled here

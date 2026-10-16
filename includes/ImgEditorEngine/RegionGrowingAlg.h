@@ -76,7 +76,8 @@ std::queue<std::shared_ptr<Pixl>> putGermsDivide(const Mat<T> &img, std::vector<
     // Get a number of germ through the commandline
     std::queue<std::shared_ptr<Pixl>> seedlist; // Stores the seeds
     int index = 0;
-    int germquant = n * n;
+    int gridrows = n;
+    int gridcols = n;
     // Divide in n part on each side
     int partheight = img.getRows() / n;
     int partwidth = img.getCols() / n;
@@ -86,9 +87,11 @@ std::queue<std::shared_ptr<Pixl>> putGermsDivide(const Mat<T> &img, std::vector<
         // Set the part size to a prechosen value
         partheight = 4;
         partwidth = 4;
-        // Since partsize don't depend of germquant there, germquant must depend from partsize
-        germquant = (img.getRows() * img.getCols()) / (partheight * partwidth);
+        // Grid must stay inside the image
+        gridrows = img.getRows() / partheight;
+        gridcols = img.getCols() / partwidth;
     }
+    int germquant = gridrows * gridcols;
 
     // allocate as much region as there is seed
 
@@ -101,19 +104,18 @@ std::queue<std::shared_ptr<Pixl>> putGermsDivide(const Mat<T> &img, std::vector<
     while (index < germquant)
     {
 
-        for (int i = 0; i < n && index < germquant; ++i)
+        for (int i = 0; i < gridrows && index < germquant; ++i)
         {
-            for (int j = 0; j < n && index < germquant; ++j)
+            for (int j = 0; j < gridcols && index < germquant; ++j)
             {
                 int startrow = i * partheight;
                 int endrow = ((i + 1) * partheight) - 1;
                 int startcol = j * partwidth;
                 int endcol = ((j + 1) * partwidth) - 1;
 
-                // Extract the current part from the image
-                int y = startcol + std::rand() % (endcol - startcol + 1); // generate a random number for x
-
-                int x = startrow + std::rand() % (endrow - startrow + 1);
+                // Extract the current part from the image (x is the column, y the row)
+                int x = startcol + std::rand() % (endcol - startcol + 1);
+                int y = startrow + std::rand() % (endrow - startrow + 1);
 
                 std::shared_ptr<Pixl> pix(new Pixl(x, y, index));
                 seedlist.push(pix);

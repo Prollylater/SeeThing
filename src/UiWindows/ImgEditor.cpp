@@ -110,6 +110,8 @@ void ShowImageRenderingArea()
                 ImGui::SameLine();
             }
             std::string button_label = "Button " + std::to_string(i + 1);
+            // Two buttons share the same icon label
+            ImGui::PushID(i);
             if (ImGui::Button(icons[i]))
             {
                 switch (i)
@@ -136,6 +138,7 @@ void ShowImageRenderingArea()
                 ImGui::Text("This is the description for %s", button_label.c_str());
                 ImGui::EndTooltip();
             }
+            ImGui::PopID();
         }
 
         ImGui::PopStyleVar();
@@ -170,7 +173,6 @@ void ShowImageRenderingArea()
         {
             // TODO offload this to the texture
             glBindTexture(GL_TEXTURE_2D, display);
-            ImGui::ShowMetricsWindow();
 
             ImGui::Image((ImTextureID)(intptr_t)display, ImVec2(im_width, im_height), ImVec2(0, 1), ImVec2(1, 0));
         }
