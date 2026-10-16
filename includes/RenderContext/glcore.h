@@ -3,8 +3,8 @@
 #define GL3CORE_H
 
     // windows et linux
-    #define GLEW_NO_GLU
-    #include "GL/glew.h"
+    #include <glad/gl.h>
+    #define GLFW_INCLUDE_NONE
     #include <GLFW/glfw3.h>
     
 

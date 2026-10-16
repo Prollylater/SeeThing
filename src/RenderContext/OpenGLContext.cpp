@@ -1,5 +1,6 @@
 
 #include "OpenGLContext.h"
+#include <cstdlib>
 
 namespace OpenGlContext
 {
@@ -24,7 +25,7 @@ namespace OpenGlContext
         glClear(GL_COLOR_BUFFER_BIT /*| GL_DEPTH_BUFFER_BIT*/);
     }
 
-    // Initialize GLEW, GL and GLFW
+    // Initialize GLFW, the GL 4.5 context and glad
     // Must be the first thing to launch to allow function to be found
     bool initGlContext(GLFWwindow *&window, int width, int height)
     {
@@ -34,13 +35,17 @@ namespace OpenGlContext
         glfwSetErrorCallback([](int error, const char *description)
                              { std::cerr << "GLFW Error (" << error << "): " << description << std::endl; });
 
+        // Multi-viewports need window positions, which Wayland forbids: prefer XWayland
+        if (glfwPlatformSupported(GLFW_PLATFORM_X11) && std::getenv("DISPLAY"))
+            glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+
         if (!glfwInit())
         {
             std::cerr << "Failed to initialize GLFW" << std::endl;
             return 0;
         }
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
         window = glfwCreateWindow(width, height, "ImgEditor", NULL, NULL);
@@ -52,10 +57,9 @@ namespace OpenGlContext
         }
         glfwMakeContextCurrent(window);
 
-        glewExperimental = GL_TRUE;
-        if (glewInit() != GLEW_OK)
+        if (!gladLoadGL(glfwGetProcAddress))
         {
-            std::cerr << "Failed to initialize GLEW" << std::endl;
+            std::cerr << "Failed to load the OpenGL 4.5 functions" << std::endl;
             glfwTerminate();
             return 0;
         }

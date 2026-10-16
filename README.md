@@ -1,7 +1,7 @@
 # Yet to be Named OpenGL-Based Application
 
 This application offer a graphical interface and code base aiming to be modulable for testing and implementing computer vision algorithm going from segmentation to color transfer and much more.
-The project is an OpenGL-based application utilizing ImGui for the graphical user interface, GLEW for managing OpenGL extensions, and CMake for building the project.
+The project is an OpenGL application. It uses ImGui for the graphical user interface, glad to load OpenGL and CMake to build.
 
 ## Table of Contents
 1. [Features](#features)
@@ -19,11 +19,12 @@ The project is an OpenGL-based application utilizing ImGui for the graphical use
 
 Before building and running the application, make sure you have the following software installed:
 - **CMake** 3.16 or higher
-- A **C++17** compiler (GCC, Clang or MSVC)
-- **GLEW**
-- **GLFW** 3
-- **OpenGL** (version 3.3 or higher)
-- **OpenMP** (optional: SLIC uses it when found)
+- A **C++20** compiler (GCC, Clang or MSVC)
+- **git** (CMake downloads GLFW with it on the first configure)
+- A GPU and driver with **OpenGL 4.5**
+- **OpenMP** (optional, for multithreaded SLIC)
+
+CMake downloads and builds GLFW. The OpenGL loader (glad) is in `third_party/`.
 
 ## Building and Running the Project
 
@@ -34,9 +35,10 @@ To build the project, follow these steps:
    git clone https://github.com/Prollylater/SeeThing.git
    cd SeeThing
    ```
-2. **Install the dependencies** (Debian/Ubuntu shown; use your package manager otherwise):
+2. **Install the build tools.** On Linux, GLFW also needs the X11 and Wayland headers. The command below is for Debian and Ubuntu. On other systems, use your package manager. Windows needs only Visual Studio, CMake and git.
    ```bash
-   sudo apt install build-essential cmake libglew-dev libglfw3-dev
+   sudo apt install build-essential cmake git libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
+                    libwayland-dev libxkbcommon-dev
    ```
 3. **Build and run:**
    ```bash
@@ -47,5 +49,7 @@ To build the project, follow these steps:
    Every build copies `ressources/` next to the executable, so it runs from any folder.
    To load shaders and fonts from somewhere else, set `SEETHING_ASSET_DIR`, for example
    `SEETHING_ASSET_DIR=$PWD/ressources ./build/seething`.
+   The first configure downloads GLFW into the build folder. Set `CPM_SOURCE_CACHE=$HOME/.cache/CPM` to share
+   that download between build folders and to configure offline afterwards.
 
 ![image](https://github.com/user-attachments/assets/33926deb-2afa-4857-ac03-36b3907d4e49)

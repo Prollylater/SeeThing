@@ -1,4 +1,4 @@
-#version 330 core
+#version 450 core
 in vec2 UV;
 uniform sampler2D image_color;
 out vec4 fragment_color;

@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
-project(SeeThing LANGUAGES CXX)
+project(SeeThing LANGUAGES C CXX)
 
-find_package(OpenGL REQUIRED)
-find_package(GLEW REQUIRED)
-find_package(glfw3 REQUIRED)
+include(cmake/CPM.cmake)
+CPMAddPackage(NAME glfw3 GITHUB_REPOSITORY glfw/glfw GIT_TAG 3.5.1
+              OPTIONS "GLFW_BUILD_DOCS OFF" "GLFW_BUILD_TESTS OFF" "GLFW_BUILD_EXAMPLES OFF" "GLFW_INSTALL OFF")
 find_package(OpenMP)
 
 
@@ -26,7 +26,12 @@ target_include_directories(imgui SYSTEM PUBLIC
     ${INCLUDE_DIR}/Imgui
     ${INCLUDE_DIR}/Imgui/backends
 )
-target_link_libraries(imgui PUBLIC glfw OpenGL::GL ${CMAKE_DL_LIBS})
+target_link_libraries(imgui PUBLIC glfw ${CMAKE_DL_LIBS})
+
+
+# GL 4.5 core loader from glad 2.0.8; the command that regenerates it is at the top of gl.h
+add_library(glad STATIC third_party/glad/src/gl.c)
+target_include_directories(glad SYSTEM PUBLIC third_party/glad/include)
 
 
 add_library(seething_warnings INTERFACE)
@@ -79,10 +84,10 @@ set(INCLUDES_DIRS
 
 
 add_executable(seething ${PROJECT_SRC})
-target_compile_features(seething PRIVATE cxx_std_17)
+target_compile_features(seething PRIVATE cxx_std_20)
 target_include_directories(seething PRIVATE ${INCLUDES_DIRS})
 target_include_directories(seething SYSTEM PRIVATE ${INCLUDE_DIR}/3rdParty)
-target_link_libraries(seething PRIVATE imgui GLEW::GLEW glfw OpenGL::GL seething_warnings)
+target_link_libraries(seething PRIVATE imgui glad glfw seething_warnings)
 
 if(OpenMP_CXX_FOUND)
     target_link_libraries(seething PRIVATE OpenMP::OpenMP_CXX)
