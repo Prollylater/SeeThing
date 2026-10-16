@@ -8,6 +8,8 @@ CPMAddPackage(NAME glfw3 GITHUB_REPOSITORY glfw/glfw GIT_TAG 3.5.1
 CPMAddPackage(NAME imgui GITHUB_REPOSITORY ocornut/imgui GIT_TAG v1.93.0-docking DOWNLOAD_ONLY YES)
 find_package(OpenMP)
 
+option(SEETHING_BUILD_TESTS "Build the unit tests (downloads doctest)" ON)
+
 
 # Project directories
 set(SOURCE_DIR  src)
@@ -43,6 +45,17 @@ target_compile_options(seething_warnings INTERFACE
     "$<$<CXX_COMPILER_ID:MSVC>:/W4>"
     "$<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall;-Wextra>"
 )
+
+
+# Core: images, colour, I/O. No GL, no UI; the tests link only this
+add_library(seething_core STATIC
+    ${SOURCE_DIR}/core/Color.cpp
+    ${SOURCE_DIR}/core/ImageIO.cpp
+)
+target_compile_features(seething_core PUBLIC cxx_std_20)
+target_include_directories(seething_core PUBLIC ${SOURCE_DIR})
+target_include_directories(seething_core SYSTEM PRIVATE ${INCLUDE_DIR}/3rdParty)
+target_link_libraries(seething_core PRIVATE seething_warnings)
 
 
 set(PROJECT_SRC
@@ -91,7 +104,7 @@ add_executable(seething ${PROJECT_SRC})
 target_compile_features(seething PRIVATE cxx_std_20)
 target_include_directories(seething PRIVATE ${INCLUDES_DIRS})
 target_include_directories(seething SYSTEM PRIVATE ${INCLUDE_DIR}/3rdParty)
-target_link_libraries(seething PRIVATE imgui glad glfw seething_warnings)
+target_link_libraries(seething PRIVATE seething_core imgui glad glfw seething_warnings)
 
 if(OpenMP_CXX_FOUND)
     target_link_libraries(seething PRIVATE OpenMP::OpenMP_CXX)
@@ -107,3 +120,18 @@ add_custom_target(seething_resources ALL
             ${CMAKE_CURRENT_SOURCE_DIR}/ressources $<TARGET_FILE_DIR:seething>/ressources
     COMMENT "Copying ressources/ next to the executable"
 )
+
+
+if(SEETHING_BUILD_TESTS)
+    CPMAddPackage(NAME doctest GITHUB_REPOSITORY doctest/doctest GIT_TAG v2.5.3
+                  OPTIONS "DOCTEST_NO_INSTALL ON" "DOCTEST_WITH_MAIN_IN_STATIC_LIB OFF")
+    enable_testing()
+    add_executable(seething_tests
+        tests/core/test_main.cpp
+        tests/core/test_image.cpp
+        tests/core/test_color.cpp
+        tests/core/test_imageio.cpp
+    )
+    target_link_libraries(seething_tests PRIVATE seething_core doctest::doctest seething_warnings)
+    add_test(NAME core COMMAND seething_tests)
+endif()

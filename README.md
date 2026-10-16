@@ -51,5 +51,10 @@ To build the project, follow these steps:
    `SEETHING_ASSET_DIR=$PWD/ressources ./build/seething`.
    The first configure downloads GLFW and ImGui into the build folder. Set `CPM_SOURCE_CACHE=$HOME/.cache/CPM` to share
    that download between build folders and to configure offline afterwards.
+4. **Run the tests:**
+   ```bash
+   ctest --test-dir build --output-on-failure
+   ```
+   The tests cover the core image, colour and file code. To skip them and the doctest download, configure with `-DSEETHING_BUILD_TESTS=OFF`.
 
 ![image](https://github.com/user-attachments/assets/33926deb-2afa-4857-ac03-36b3907d4e49)
