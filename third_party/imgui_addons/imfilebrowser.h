@@ -532,7 +532,7 @@ inline void ImGui::FileBrowser::Display()
     }
 
     {
-        BeginChild("ch", ImVec2(0, -reserveHeight), true,
+        BeginChild("ch", ImVec2(0, -reserveHeight), ImGuiChildFlags_Borders,
                    (flags_ & ImGuiFileBrowserFlags_NoModal) ? ImGuiWindowFlags_AlwaysHorizontalScrollbar : 0);
         ScopeGuard endChild([] { EndChild(); });
 
@@ -556,7 +556,7 @@ inline void ImGui::FileBrowser::Display()
             }
 
             const bool selected = selectedFilenames_.find(rsc.name) != selectedFilenames_.end();
-            if(Selectable(rsc.showName.c_str(), selected, ImGuiSelectableFlags_DontClosePopups))
+            if(Selectable(rsc.showName.c_str(), selected, ImGuiSelectableFlags_NoAutoClosePopups))
             {
                 const bool wantDir = flags_ & ImGuiFileBrowserFlags_SelectDirectory;
                 const bool canSelect = rsc.name != ".." && rsc.isDir == wantDir;

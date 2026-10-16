@@ -23,11 +23,14 @@ void ShowColorPicker(bool &show, ImVec4 &color)
 void SetupImGuiFonts()
 {
     ImGuiIO &io = ImGui::GetIO();
-    static const ImWchar icon_ranges[] = {ICON_MIN_CI, ICON_MAX_CI, 0};
 
     // Load the main font
     // io.Fonts->AddFontFromFileTTF(FONT_PATH_MAIN, 16.0f);
-    io.Fonts->AddFontDefault();
+    // Explicit size: merging a sized font into an implicitly sized one asserts
+    ImFontConfig base_cfg;
+    base_cfg.SizePixels = 13.0f;
+    base_cfg.PixelSnapH = true;
+    io.Fonts->AddFontDefaultBitmap(&base_cfg);
     // Configure font merge
     ImFontConfig config;
     config.MergeMode = true;
@@ -35,10 +38,19 @@ void SetupImGuiFonts()
     config.GlyphMinAdvanceX = 14.0f;
 
     // Load the icon font and merge it
-    io.Fonts->AddFontFromFileTTF(assetPath("fonts/codicon.ttf").c_str(), 16.0f, &config, icon_ranges);
+    io.Fonts->AddFontFromFileTTF(assetPath("fonts/codicon.ttf").c_str(), 16.0f, &config);
+}
 
-    // Build the font atlas
-    io.Fonts->Build();
+void ImageTexSampler(GLuint tex, const ImVec2 &size)
+{
+    // The backend's linear sampler would override the texture's own GL_NEAREST
+    ImDrawList *draw_list = ImGui::GetWindowDrawList();
+    ImGuiPlatformIO &platform_io = ImGui::GetPlatformIO();
+    if (platform_io.DrawCallback_SetSamplerFromTex)
+        draw_list->AddCallback(platform_io.DrawCallback_SetSamplerFromTex);
+    ImGui::Image((ImTextureID)(intptr_t)tex, size, ImVec2(0, 1), ImVec2(1, 0));
+    if (platform_io.DrawCallback_ResetRenderState)
+        draw_list->AddCallback(platform_io.DrawCallback_ResetRenderState);
 }
 
 void ShowGenDisplayPanel(bool &show, GLuint &tex)
@@ -52,8 +64,7 @@ void ShowGenDisplayPanel(bool &show, GLuint &tex)
     int height = appobj::canvas.getLayer(0).getHeight();
     if (ImGui::Begin("Segmentation Result", &show))
     {
-        glBindTexture(GL_TEXTURE_2D, tex);
-        ImGui::Image((ImTextureID)(intptr_t)tex, ImVec2(width, height), ImVec2(0, 1), ImVec2(1, 0));
+        ImageTexSampler(tex, ImVec2(width, height));
     }
     ImVec2 parent_size = ImGui::GetWindowSize();
     float button_size = 20.0f;

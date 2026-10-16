@@ -28,13 +28,13 @@ void ShowSlicParameter(bool &show, GLuint &tex)
     // TODO Add description
     // Same order as XYZRefHandle and XYZrefs in Mat.h
     const char *items[] = {"A2", "B2", "C2", "D50_2", "D55_2", "D65_2", "D75_2", "E_2", "F1_2"};
-    static_assert(IM_ARRAYSIZE(items) == IM_ARRAYSIZE(XYZrefs), "illuminant labels out of sync with XYZrefs");
+    static_assert(IM_COUNTOF(items) == IM_COUNTOF(XYZrefs), "illuminant labels out of sync with XYZrefs");
     static int xyz_current_idx = D65_2;
     const char *combo_preview_value = items[xyz_current_idx];
 
     if (ImGui::BeginCombo("XYZ_Ref", combo_preview_value, ImGuiComboFlags_WidthFitPreview))
     {
-        for (int n = 0; n < IM_ARRAYSIZE(items); n++)
+        for (int n = 0; n < IM_COUNTOF(items); n++)
         {
             const bool is_selected = (xyz_current_idx == n);
             if (ImGui::Selectable(items[n], is_selected))
@@ -93,7 +93,7 @@ void ShowSlicParameter(bool &show, GLuint &tex)
 
     if (ImGui::BeginCombo("Output Coloration Values", combo_preview_coloration, ImGuiComboFlags_WidthFitPreview))
     {
-        for (int n = 0; n < IM_ARRAYSIZE(coloration); n++)
+        for (int n = 0; n < IM_COUNTOF(coloration); n++)
         {
             const bool is_selected = (coloration_current_idx == n);
             if (ImGui::Selectable(coloration[n], is_selected))
@@ -150,13 +150,13 @@ void ShowSeedParameter(bool &show, GLuint &tex)
     // Same order as rgs_comp_func_var in RegionGrowingAlg.h
     const char *comp_func[] = {"Seed's color Intensity", "Region's color intensity",
                                "Region's luminance", "Seed's Euclidian distance"};
-    static_assert(IM_ARRAYSIZE(comp_func) == RG_FUNCT_NB, "comparison labels out of sync with rgs_comp_func_var");
+    static_assert(IM_COUNTOF(comp_func) == RG_FUNCT_NB, "comparison labels out of sync with rgs_comp_func_var");
     static int funct_current_idx = 0;
     const char *combo_preview_value = comp_func[funct_current_idx];
 
     if (ImGui::BeginCombo("Region Comparison Alg", combo_preview_value, flags))
     {
-        for (int n = 0; n < IM_ARRAYSIZE(comp_func); n++)
+        for (int n = 0; n < IM_COUNTOF(comp_func); n++)
         {
             const bool is_selected = (funct_current_idx == n);
             if (ImGui::Selectable(comp_func[n], is_selected))
@@ -219,7 +219,7 @@ void ShowSeedParameter(bool &show, GLuint &tex)
 
     if (ImGui::BeginCombo("Output Coloration Values", combo_preview_coloration, ImGuiComboFlags_WidthFitPreview))
     {
-        for (int n = 0; n < IM_ARRAYSIZE(coloration); n++)
+        for (int n = 0; n < IM_COUNTOF(coloration); n++)
         {
             const bool is_selected = (coloration_current_idx == n);
             if (ImGui::Selectable(coloration[n], is_selected))

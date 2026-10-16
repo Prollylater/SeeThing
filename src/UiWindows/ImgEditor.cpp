@@ -168,13 +168,10 @@ void ShowImageRenderingArea()
         // Define some window flags
         ImGuiWindowFlags child_window_flags = 0;
 
-        ImGui::BeginChild("ImgHolder", child_size, true, child_window_flags);
+        ImGui::BeginChild("ImgHolder", child_size, ImGuiChildFlags_Borders, child_window_flags);
         if (display_states.isTrue(MainWinSt::displayed_im))
         {
-            // TODO offload this to the texture
-            glBindTexture(GL_TEXTURE_2D, display);
-
-            ImGui::Image((ImTextureID)(intptr_t)display, ImVec2(im_width, im_height), ImVec2(0, 1), ImVec2(1, 0));
+            ImageTexSampler(display, ImVec2(im_width, im_height));
         }
 
         if (ImGui::IsWindowHovered())

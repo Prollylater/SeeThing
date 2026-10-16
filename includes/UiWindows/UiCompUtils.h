@@ -16,6 +16,8 @@
 
 void ShowColorPicker(bool &show, ImVec4 &color);
 void ShowGenDisplayPanel(bool &show, GLuint &tex);
+// ImGui::Image, flipped vertically, sampled with the texture's own filter
+void ImageTexSampler(GLuint tex, const ImVec2 &size);
 
 void SetupImGuiFonts();
 

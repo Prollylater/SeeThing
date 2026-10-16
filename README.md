@@ -20,11 +20,11 @@ The project is an OpenGL application. It uses ImGui for the graphical user inter
 Before building and running the application, make sure you have the following software installed:
 - **CMake** 3.16 or higher
 - A **C++20** compiler (GCC, Clang or MSVC)
-- **git** (CMake downloads GLFW with it on the first configure)
+- **git** (CMake downloads GLFW and Dear ImGui with it on the first configure)
 - A GPU and driver with **OpenGL 4.5**
 - **OpenMP** (optional, for multithreaded SLIC)
 
-CMake downloads and builds GLFW. The OpenGL loader (glad) is in `third_party/`.
+CMake downloads and builds GLFW 3.5.1 and Dear ImGui 1.93.0 (docking). The OpenGL loader (glad) and two ImGui add-ons are in `third_party/`.
 
 ## Building and Running the Project
 
@@ -49,7 +49,7 @@ To build the project, follow these steps:
    Every build copies `ressources/` next to the executable, so it runs from any folder.
    To load shaders and fonts from somewhere else, set `SEETHING_ASSET_DIR`, for example
    `SEETHING_ASSET_DIR=$PWD/ressources ./build/seething`.
-   The first configure downloads GLFW into the build folder. Set `CPM_SOURCE_CACHE=$HOME/.cache/CPM` to share
+   The first configure downloads GLFW and ImGui into the build folder. Set `CPM_SOURCE_CACHE=$HOME/.cache/CPM` to share
    that download between build folders and to configure offline afterwards.
 
 ![image](https://github.com/user-attachments/assets/33926deb-2afa-4857-ac03-36b3907d4e49)

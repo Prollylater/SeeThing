@@ -4,6 +4,8 @@ project(SeeThing LANGUAGES C CXX)
 include(cmake/CPM.cmake)
 CPMAddPackage(NAME glfw3 GITHUB_REPOSITORY glfw/glfw GIT_TAG 3.5.1
               OPTIONS "GLFW_BUILD_DOCS OFF" "GLFW_BUILD_TESTS OFF" "GLFW_BUILD_EXAMPLES OFF" "GLFW_INSTALL OFF")
+# Read docs/CHANGELOG.txt of the new tag before moving it
+CPMAddPackage(NAME imgui GITHUB_REPOSITORY ocornut/imgui GIT_TAG v1.93.0-docking DOWNLOAD_ONLY YES)
 find_package(OpenMP)
 
 
@@ -12,20 +14,22 @@ set(SOURCE_DIR  src)
 set(INCLUDE_DIR includes)
 
 
-# Vendored Dear ImGui, built apart so the project's warning flags don't apply to it
+# Dear ImGui, built apart so the project's warning flags don't apply to it
 add_library(imgui STATIC
-    ${INCLUDE_DIR}/Imgui/imgui.cpp
-    ${INCLUDE_DIR}/Imgui/imgui_demo.cpp
-    ${INCLUDE_DIR}/Imgui/imgui_draw.cpp
-    ${INCLUDE_DIR}/Imgui/imgui_tables.cpp
-    ${INCLUDE_DIR}/Imgui/imgui_widgets.cpp
-    ${INCLUDE_DIR}/Imgui/backends/imgui_impl_glfw.cpp
-    ${INCLUDE_DIR}/Imgui/backends/imgui_impl_opengl3.cpp
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_demo.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
 )
 target_include_directories(imgui SYSTEM PUBLIC
-    ${INCLUDE_DIR}/Imgui
-    ${INCLUDE_DIR}/Imgui/backends
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
+    third_party/imgui_addons
 )
+target_compile_definitions(imgui PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS)
 target_link_libraries(imgui PUBLIC glfw ${CMAKE_DL_LIBS})
 
 
