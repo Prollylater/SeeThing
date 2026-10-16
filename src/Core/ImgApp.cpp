@@ -39,6 +39,8 @@ void ImgApp::start()
     OpenGlContext::postRender(main_window);
 
     ImGuiAppContext::postRender();
+
+    appobj::glengine.flushDeferredDeletes();
   }
 }
 void ImgApp::quit()

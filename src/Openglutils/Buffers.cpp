@@ -2,13 +2,14 @@
 
 // Structure holding a vao and it's attached vbo and ebo
 
-BufferIDsGroups::BufferIDsGroups(GLuint vao_id, GLuint vbo_id, GLuint ebo_id) : m_vao_id(vao_id), m_vbo_id(vao_id), m_ebo_id(vao_id) {};
-BufferIDsGroups::BufferIDsGroups(GLuint vao_id, GLuint vbo_id, GLuint ebo_id, int count) : m_vao_id(vao_id), m_vbo_id(vao_id), m_ebo_id(vao_id), m_count(count) {};
+BufferIDsGroups::BufferIDsGroups(GLuint vao_id, GLuint vbo_id, GLuint ebo_id) : m_vao_id(vao_id), m_vbo_id(vbo_id), m_ebo_id(ebo_id) {};
+BufferIDsGroups::BufferIDsGroups(GLuint vao_id, GLuint vbo_id, GLuint ebo_id, int count, GLuint vbotex_id) : m_vao_id(vao_id), m_vbo_id(vbo_id), m_ebo_id(ebo_id), m_vbotex_id(vbotex_id), m_count(count) {};
 void BufferIDsGroups::zeros()
 {
     m_vao_id = 0;
     m_vbo_id = 0;
     m_ebo_id = 0;
+    m_vbotex_id = 0;
 }
 
 GLuint BufferIDsGroups::getVao()
@@ -31,7 +32,7 @@ BufferIDsGroups createBuffers(const std::vector<Vec<float>> &verticestab, const 
         return BufferIDsGroups();
     }
 
-    GLuint vao, vbo, vbotex, ebo;
+    GLuint vao = 0, vbo = 0, vbotex = 0, ebo = 0;
     // Generate all vertex
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
@@ -51,7 +52,8 @@ BufferIDsGroups createBuffers(const std::vector<Vec<float>> &verticestab, const 
         glGenBuffers(1, &vbotex);
         glBindBuffer(GL_ARRAY_BUFFER, vbotex);
         glBufferData(GL_ARRAY_BUFFER, texcoords.size() * sizeof(Vec<float>), texcoords.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+        // Vec<float> holds 3 floats: read 2, stride over the whole Vec
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vec<float>), (const void *)0);
         glEnableVertexAttribArray(1);
     }
     // TODO Add normal in case going to 3D
@@ -73,7 +75,7 @@ BufferIDsGroups createBuffers(const std::vector<Vec<float>> &verticestab, const 
         return BufferIDsGroups(0, 0, 0, 0);
     }
 
-    return BufferIDsGroups(vao, vbo, ebo, indices.size());
+    return BufferIDsGroups(vao, vbo, ebo, indices.size(), vbotex);
 }
 
 GLuint createFBO(TextureResource &texress)
@@ -172,10 +174,10 @@ void freeBuffers(BufferIDsGroups &bufferid)
     GLuint &vao = bufferid.m_vao_id;
     GLuint &vbo = bufferid.m_vbo_id;
     GLuint &ebo = bufferid.m_ebo_id;
+    GLuint &vbotex = bufferid.m_vbotex_id;
 
-    if (!(vao <= 0))
+    if (vao == 0)
     {
-        // Simply add Exception here
         bufferid.zeros();
         return;
     }
@@ -185,8 +187,9 @@ void freeBuffers(BufferIDsGroups &bufferid)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); // Unbind EBO
 
     // Step 2: Delete the buffers
-    glDeleteBuffers(1, &vbo); // Delete VBO
-    glDeleteBuffers(1, &ebo); // Delete EBO
+    glDeleteBuffers(1, &vbo);    // Delete VBO
+    glDeleteBuffers(1, &vbotex); // Delete texcoord VBO
+    glDeleteBuffers(1, &ebo);    // Delete EBO
 
     // Finally we van delete the Vao
     glBindVertexArray(0);

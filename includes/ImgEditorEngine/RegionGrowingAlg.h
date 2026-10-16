@@ -648,8 +648,8 @@ void moveCenterGradBased(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>>
 
 {
 
-    Mat<T> imgLABspace(image);
-    // Conversion to LABSPACEimg
+    // a* and b* are negative: Lab must be stored as float
+    Mat<float> imgLABspace = image.template convertDt<float>();
     imgLABspace.toLabSpace(param);
 
     // Doubt the memory cost is worth it as callculation ere are done one time
@@ -669,7 +669,7 @@ void moveCenterGradBased(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>>
     {
         // Create a cache for gradients
 
-        float mingradient = calcGradientSobel<T>(currentPixel->x, currentPixel->y, imgLABspace);
+        float mingradient = calcGradientSobel(currentPixel->x, currentPixel->y, imgLABspace);
         // float mingradient = getGradient(currentPixel->x, currentPixel->y);
         int startX = std::max(currentPixel->x - 1, 0);
         int endX = std::min(currentPixel->x + 1, image.getCols() - 1);
@@ -682,7 +682,7 @@ void moveCenterGradBased(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>>
             for (int j = startY; j <= endY; ++j)
             {
 
-                float currentgradient = calcGradientSobel<T>(i, j, imgLABspace);
+                float currentgradient = calcGradientSobel(i, j, imgLABspace);
                 // float currentgradient = getGradient(i, j);
                 if (mingradient > currentgradient)
                 {
@@ -769,8 +769,8 @@ struct slicMapPair
 template <typename T>
 void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> &supapixllist, std::vector<Region> &regions, const SlicParameter &param)
 {
-    Mat<T> imgLABspace(image);
-    // Conversion to LABSPACEimg
+    // a* and b* are negative: Lab must be stored as float
+    Mat<float> imgLABspace = image.template convertDt<float>();
     imgLABspace.toLabSpace(param.m_labparam);
     int imgsize = image.getRows() * image.getCols();
 

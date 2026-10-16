@@ -66,7 +66,6 @@ void ShowGenDisplayPanel(bool &show, GLuint &tex)
     ImGui::SameLine();
     if (ImGui::Button("Reset", ImVec2(80.0f, 20.0f)))
     {
-        // TODO, weird thing happen
         appobj::glengine.deleteTexture(tex);
         show = false;
     };

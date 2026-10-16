@@ -89,10 +89,6 @@ GLuint makeTextureMat(const int unit,
         break;
     case 3:
         format = GL_RGB;
-        if (im.getCols() % 3 != 0)
-        {
-            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        }
         break;
     case 4:
         format = GL_RGBA;
@@ -116,9 +112,13 @@ GLuint makeTextureMat(const int unit,
 
     glBindTexture(GL_TEXTURE_2D, texture);
 
-   
+    // Mat rows are tightly packed, GL defaults to 4-byte row alignment
+    GLint previous_alignment = 4;
+    glGetIntegerv(GL_UNPACK_ALIGNMENT, &previous_alignment);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexImage2D(GL_TEXTURE_2D, 0, texel_type, im.getCols(), im.getRows(), 0,
                  format, data_type, im.getData());
+    glPixelStorei(GL_UNPACK_ALIGNMENT, previous_alignment);
     if (glGetError() != GL_NO_ERROR)
     {
         std::cerr << "Failed to create texture image." << std::endl;

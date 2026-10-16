@@ -1,9 +1,4 @@
 #include "ImgEditorEngine.h"
-#define GET_NUM_CHANNELS(internalFormat)                             \
-    (internalFormat) == GL_RED ? 1 : (internalFormat) == GL_RG   ? 2 \
-                                 : ((internalFormat) == GL_RGB)  ? 3 \
-                                 : ((internalFormat) == GL_RGBA) ? 4 \
-                                                                 : 0
 
 // Define instance of the app object which each correspond to a feature
 namespace appobj
@@ -58,8 +53,9 @@ bool OpenGLEngine::initImrender()
 
     loadedvao = createBuffers(canvas, indices, canvastext);
     // TODO Array of shader for each change
-    // Init program with the generic loading shader
+    // Built once, never per draw call
     prog.init("./ressources/shaders/imgoutput.vs", "./ressources/shaders/imgoutput.fs");
+    prog_colchange.init("./ressources/shaders/colchange.vs", "./ressources/shaders/colchange.fs");
 
     return true;
 }
@@ -70,35 +66,37 @@ bool OpenGLEngine::initImrender()
 // Result of operation etc..
 bool OpenGLEngine::saveTextInst(GLuint &out_texture, const char *filename)
 {
-    GLint width, height, format;
+    GLint width, height;
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, out_texture);
-    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &format);
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
-    int channels = GET_NUM_CHANNELS(format);
     // TODO Channles data not stored
+    // glGetTexImage below always reads GL_RGB
+    int channels = 3;
     int size = width * height * (channels);
-    if (channels == 3)
-    {   
-        //Use Pack Alignment to mirror the UNPACK_ALIGNMENT at write
-        glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    }
+    GLint previous_alignment = 4;
+    glGetIntegerv(GL_PACK_ALIGNMENT, &previous_alignment);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
     std::cout << "Size related to file writing (w, h, chan): " << std::endl;
     std::cout << width <<" "<< height << channels << std::endl;
     uint8_t *pixels = new uint8_t[size];
 
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+    glPixelStorei(GL_PACK_ALIGNMENT, previous_alignment);
     GLenum error = glGetError();
     if (error != GL_NO_ERROR)
     {
         std::cerr << "Error during saving  imagefrom texture " << error << std::endl;
-        return 0;
+        delete[] pixels;
+        return false;
     }
     // TODO GIve choice between mutiple format
     writeImgJpg(filename, pixels,  width, height, channels,true);
+    delete[] pixels;
+    return true;
 }
 
 
@@ -157,6 +155,9 @@ bool OpenGLEngine::outputImg(const char *datapath, GLuint *out_texture, int *out
 
     // Load image in two texture and in the mat object
     // Second texture may have no purpose out in the current build
+    // The old texture may still be drawn this frame
+    deleteTexture(imageress.texture_id);
+    glDeleteSamplers(1, &imageress.sampler_id);
     initTextRess(imageress, read_texture<textuc>(0, datapath, tmpmat));
 
     *out_width = tmpmat.getCols();
@@ -178,10 +179,12 @@ bool OpenGLEngine::outputImg(const char *datapath, GLuint *out_texture, int *out
     // TODO, only init for the first texture in the vector
     // Implement mangament for multiple layers
 
-    if (fbo == 0)
-    { // Create a fbo for other renderings
-        fbo = createFBO(imageress);
+    // Re-target the fbo to the new texture
+    if (fbo != 0)
+    {
+        glDeleteFramebuffers(1, &fbo);
     }
+    fbo = createFBO(imageress);
     // glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
     //  FBO texture
@@ -217,10 +220,28 @@ void OpenGLEngine::renderTexture()
 }
 */
 
+// Deferred: ImGui may still draw tex this frame
 bool OpenGLEngine::deleteTexture(GLuint &tex)
 {
+    if (tex == 0)
+    {
+        return false;
+    }
+    pending_texture_deletes.push_back(tex);
+    tex = 0;
+    return true;
+}
+
+// Call once per frame, after ImGui rendered
+void OpenGLEngine::flushDeferredDeletes()
+{
+    if (pending_texture_deletes.empty())
+    {
+        return;
+    }
     glBindTexture(GL_TEXTURE_2D, 0);
-    freeTexture(tex);
+    glDeleteTextures(static_cast<GLsizei>(pending_texture_deletes.size()), pending_texture_deletes.data());
+    pending_texture_deletes.clear();
 }
 
 // TODO, the change here is not transfered to the canvas
@@ -233,9 +254,6 @@ void OpenGLEngine::copyTextureToFBO(GLuint &tex, int width, int height)
     // Set viewport to correct size
 
     glViewport(0, 0, width, height);
-
-    prog.reset();
-    prog.init("./ressources/shaders/imgoutput.vs", "./ressources/shaders/imgoutput.fs");
 
     prog.use();
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -254,10 +272,11 @@ void OpenGLEngine::copyTextureToFBO(GLuint &tex, int width, int height)
 
     bindTexture(temp_tex_res, prog.shader_id, "image_color");
     std::cout << "id" << prog.shader_id << std::endl;
-    glDrawElements(GL_TRIANGLE_STRIP, loadedvao.m_count, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, loadedvao.m_count, GL_UNSIGNED_INT, 0);
 
     glBindVertexArray(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteSamplers(1, &temp_tex_res.sampler_id);
 
     GLenum error = glGetError();
     if (error != GL_NO_ERROR)
@@ -278,10 +297,7 @@ void OpenGLEngine::renderColChange(std::vector<Vec<GLfloat>> &to_color, const Ve
     // Set viewport to correct size
     glViewport(0, 0, width, height);
 
-    prog.reset();
-    prog.init("./ressources/shaders/colchange.vs", "./ressources/shaders/colchange.fs");
-
-    prog.use();
+    prog_colchange.use();
     GLenum error = glGetError();
     if (error != GL_NO_ERROR)
     {
@@ -301,10 +317,10 @@ void OpenGLEngine::renderColChange(std::vector<Vec<GLfloat>> &to_color, const Ve
         return;
     }
     glBindVertexArray(work_vao.getVao());
-    prog.addUniform3("new_color", color);
-    prog.addUniform1("text_height", height);
-    prog.addUniform1("text_width", width);
-    prog.addUniform1("pt_size", pt_size);
+    prog_colchange.addUniform3("new_color", color);
+    prog_colchange.addUniform1("text_height", height);
+    prog_colchange.addUniform1("text_width", width);
+    prog_colchange.addUniform1("pt_size", pt_size);
 
     // Directly use the size of the to color arrray sinnce no ebo were crearted for this
     // glDrawElements(GL_POINTS, to_color.size(), GL_UNSIGNED_INT, 0);

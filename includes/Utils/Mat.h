@@ -109,7 +109,9 @@ public:
         {
             newdata[i] = static_cast<T2>(this->data[i]);
         }
+        // The constructor copies newdata
         Mat<T2> newmat(newdata, this->rows, this->cols, this->channels);
+        delete[] newdata;
 
         return newmat;
     };
@@ -123,7 +125,7 @@ public:
     // Assignment Op
     Mat<T> &operator=(const Mat<T> &other);
 
-    Mat<T> &operator=(Mat<T> &&otherMat);
+    Mat<T> &operator=(Mat<T> &&otherMat) noexcept;
 
     // Calculation
 
@@ -207,10 +209,10 @@ public:
     Vec<T> atVec(int row, int col);
     const Vec<T> atVec(int row, int col) const;
 
-    ~Mat() = default;/*
+    ~Mat()
     {
         delete[] data;
-    }*/
+    }
 };
 
 // Merge a Matimg object splitted according to it's number of channels
@@ -264,7 +266,10 @@ Mat<T>::Mat(T *_data, int _rows, int _cols, int _channels) : rows(_rows),
 
     data = new T[rows * cols * channels];
     //Better than memcopy ?
-    std::memmove(data, _data, rows * cols * channels * sizeof(T));
+    if (_data != nullptr)
+    {
+        std::memmove(data, _data, rows * cols * channels * sizeof(T));
+    }
     clrspace = (channels > 2) ? PixlColorSpace::RGB : PixlColorSpace::Gray;
     /* Potential managment of PixlColorSpace, Better use setter though
     if(channels > 2){
@@ -283,7 +288,10 @@ Mat<T>::Mat(const Mat<T> &otherMat)
     // std::cout << "Creared from copycons shit" << std::endl;
 
     data = new T[rows * cols * channels];
-    std::memcpy(data, otherMat.data, rows * cols * channels * sizeof(T));
+    if (otherMat.data != nullptr)
+    {
+        std::memcpy(data, otherMat.data, rows * cols * channels * sizeof(T));
+    }
 }
 
 template <typename T>
@@ -486,15 +494,19 @@ Mat<T> &Mat<T>::operator=(const Mat<T> &othermat)
 {
     if (this != &othermat)
     {
+        // Allocate first so a throwing new[] leaves *this intact
+        T *newdata = new T[othermat.rows * othermat.cols * othermat.channels];
+        if (othermat.data != nullptr)
+        {
+            std::memcpy(newdata, othermat.data, othermat.rows * othermat.cols * othermat.channels * sizeof(T));
+        }
         delete[] data;
+        data = newdata;
 
         rows = othermat.rows;
         cols = othermat.cols;
         clrspace = othermat.clrspace;
         channels = othermat.channels;
-
-        data = new T[rows * cols * channels];
-        std::memcpy(data, othermat.data, rows * cols * channels * sizeof(T));
     }
 
     return *this;
@@ -502,7 +514,7 @@ Mat<T> &Mat<T>::operator=(const Mat<T> &othermat)
 
 // Move assignment Op
 template <typename T>
-Mat<T> &Mat<T>::operator=(Mat<T> &&othermat)
+Mat<T> &Mat<T>::operator=(Mat<T> &&othermat) noexcept
 {
     if (this != &othermat)
     {
@@ -776,6 +788,7 @@ void merge(Mat<T> &tomerge, std::vector<T> channel1,
             tempmerge[i * channels + 3] = channel4[i];
         }
     }
+    delete[] tomerge.data;
     tomerge.data = tempmerge;
 
     return;
@@ -850,7 +863,9 @@ Mat<T> mergeInto(std::vector<std::vector<T>> &channels, bool equalchannel, int r
         currchan++;
     }
 
+    // The constructor copies newdata
     Mat<T> newmat(newdata, rows, cols, nbchannels);
+    delete[] newdata;
     return newmat;
 }
 

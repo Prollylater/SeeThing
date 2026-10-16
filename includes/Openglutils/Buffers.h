@@ -11,11 +11,11 @@
 struct BufferIDsGroups
 {
 public:
-    GLuint m_vao_id, m_vbo_id, m_ebo_id;
-    int m_count;
+    GLuint m_vao_id = 0, m_vbo_id = 0, m_ebo_id = 0, m_vbotex_id = 0;
+    int m_count = 0;
     BufferIDsGroups() = default;
     BufferIDsGroups(GLuint vao_id, GLuint vbo_id, GLuint ebo_id);
-    BufferIDsGroups(GLuint vao_id, GLuint vbo_id, GLuint ebo_id, int count);
+    BufferIDsGroups(GLuint vao_id, GLuint vbo_id, GLuint ebo_id, int count, GLuint vbotex_id = 0);
     GLuint getVao();
     int getCount();
 
