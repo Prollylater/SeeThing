@@ -4,7 +4,7 @@
 
 namespace gpu
 {
-    Renderer::Renderer(const std::string &shaderDir)
+    Renderer::Renderer(const std::string &shaderDir, core::Log *log) : m_shaders(log)
     {
         const std::string dir = shaderDir.empty() || shaderDir.back() == '/' ? shaderDir : shaderDir + "/";
         if (!m_shaders.load("blit", dir + "fullscreen.vert", dir + "blit.frag") ||

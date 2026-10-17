@@ -17,7 +17,7 @@ namespace gpu
     {
     public:
         // Loads fullscreen.vert, blit.frag, points.vert and solid.frag from shaderDir; throws if one fails
-        explicit Renderer(const std::string &shaderDir);
+        explicit Renderer(const std::string &shaderDir, core::Log *log = nullptr);
 
         // Draws src over the whole target, nearest-sampled
         void blit(const Texture &src, const Framebuffer &dst);

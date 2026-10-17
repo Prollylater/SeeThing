@@ -1,4 +1,5 @@
 #include "ShaderCache.h"
+#include "core/Log.h"
 
 #include <fstream>
 #include <iostream>
@@ -31,6 +32,14 @@ namespace gpu
         }
     }
 
+    void ShaderCache::report(const std::string &message) const
+    {
+        if (m_log)
+            m_log->add(core::LogLevel::Error, message);
+        else
+            std::cerr << message << "\n";
+    }
+
     bool ShaderCache::build(Entry &entry, const std::string &name, const std::string &vertexCode, const std::string &fragmentCode)
     {
         std::string log;
@@ -40,7 +49,7 @@ namespace gpu
         if (program.empty())
         {
             m_lastError = log;
-            std::cerr << "Shader \"" << name << "\" failed to build:\n" << log;
+            report("Shader \"" + name + "\" failed to build:\n" + log);
             return false;
         }
         entry.program = std::move(program);
@@ -57,7 +66,7 @@ namespace gpu
             if (!readFile(*path, *code))
             {
                 m_lastError = "cannot read " + path->string();
-                std::cerr << "Shader \"" << name << "\": " << m_lastError << "\n";
+                report("Shader \"" + name + "\": " + m_lastError);
                 return false;
             }
         return build(entry, name, vertexCode, fragmentCode);

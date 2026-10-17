@@ -7,12 +7,19 @@
 #include <map>
 #include <string>
 
+namespace core
+{
+    class Log;
+}
+
 namespace gpu
 {
-    // Programs built once and looked up by name. Compile and link errors go to stderr with the info log.
+    // Programs built once and looked up by name. Compile and link errors go to the log (stderr without one).
     class ShaderCache
     {
     public:
+        explicit ShaderCache(core::Log *log = nullptr) : m_log(log) {}
+
         bool load(const std::string &name, const std::string &vertexPath, const std::string &fragmentPath);
         bool add(const std::string &name, const std::string &vertexCode, const std::string &fragmentCode);
 
@@ -35,6 +42,9 @@ namespace gpu
 
         bool build(Entry &entry, const std::string &name, const std::string &vertexCode, const std::string &fragmentCode);
         bool buildFromFiles(Entry &entry, const std::string &name);
+        void report(const std::string &message) const;
+
+        core::Log *m_log = nullptr;
 
         std::map<std::string, Entry> m_entries;
         std::string m_lastError;

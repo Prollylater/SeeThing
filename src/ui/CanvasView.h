@@ -18,6 +18,7 @@ namespace ui
         float zoom = 1.0f;
         // The image size the view was last fitted to; a new size refits
         core::Vec2f fittedSize{-1, -1};
+        enum class Request { None, Fit, ActualSize } request = Request::None;
 
         core::Vec2f toScreen(core::Vec2f image, core::Vec2f origin) const { return origin + pan + image * zoom; }
         core::Vec2f toImage(core::Vec2f screen, core::Vec2f origin) const { return (screen - origin - pan) / zoom; }

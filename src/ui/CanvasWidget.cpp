@@ -57,10 +57,11 @@ namespace ui
         size.y -= ImGui::GetTextLineHeightWithSpacing();
         size = {std::max(size.x, 32.0f), std::max(size.y, 32.0f)};
 
-        if (fitClicked || !(view.fittedSize == imageSize))
+        if (fitClicked || view.request == CanvasView::Request::Fit || !(view.fittedSize == imageSize))
             view.fit(imageSize, size);
-        if (actualClicked)
+        if (actualClicked || view.request == CanvasView::Request::ActualSize)
             view.actualSize(imageSize, size);
+        view.request = CanvasView::Request::None;
 
         ImGui::InvisibleButton("##canvas", im(size),
                                ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight | ImGuiButtonFlags_MouseButtonMiddle);

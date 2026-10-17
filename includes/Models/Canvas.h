@@ -22,6 +22,7 @@ public:
     Layer &getLayer(int index);
     const Layer &getLayer(int index) const;
     int getLayerNb() const;
+    void clear() { layers.clear(); }
     // Undo/Redo management
 };
 

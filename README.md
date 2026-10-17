@@ -55,6 +55,8 @@ To build the project, follow these steps:
    ```bash
    ctest --test-dir build --output-on-failure
    ```
-   The tests cover the core image, colour and file code. To skip them and the doctest download, configure with `-DSEETHING_BUILD_TESTS=OFF`.
+   The tests cover the core image, colour and file code, and the GPU layer. The GPU tests make a GL 4.5 context
+   through EGL with no window; where none can be made, ctest reports them as skipped. To skip all tests and the
+   doctest download, configure with `-DSEETHING_BUILD_TESTS=OFF`.
 
 ![image](https://github.com/user-attachments/assets/33926deb-2afa-4857-ac03-36b3907d4e49)

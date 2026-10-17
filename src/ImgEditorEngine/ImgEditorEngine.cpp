@@ -3,43 +3,26 @@
 #include "core/Color.h"
 #include "core/ImageIO.h"
 
-namespace appobj
-{
-    Canvas canvas;
-    std::unique_ptr<OpenGLEngine> glengine;
-    RGEngine rgengine;
-}
-
-OpenGLEngine::OpenGLEngine(const std::string &shader_dir) : m_renderer(shader_dir)
+OpenGLEngine::OpenGLEngine(const std::string &shader_dir, core::Log &log) : m_renderer(shader_dir, &log)
 {
 }
 
-bool OpenGLEngine::openImage(const std::string &path, std::string *error)
+void OpenGLEngine::setMainImage(core::ImageView<const uint8_t> image)
 {
-    core::LoadResult loaded = core::loadImage(path, 0);
-    if (!loaded.ok())
-    {
-        if (error)
-            *error = loaded.error;
-        return false;
-    }
-
     // RGBA8 whatever the file holds: the main texture is a render target
-    gpu::Texture tex = gpu::Texture::fromImage<uint8_t>(core::toRGBA8(loaded.image));
+    gpu::Texture tex = gpu::Texture::fromImage<uint8_t>(core::toRGBA8(image));
     gpu::Framebuffer fbo(tex);
     // The old texture may still be drawn this frame
     m_renderer.retire(std::move(m_main_fbo));
     m_renderer.retire(std::move(m_main_tex));
     m_main_tex = std::move(tex);
     m_main_fbo = std::move(fbo);
+}
 
-    // Currently only deal with the layer 0: replace it, don't stack a new one
-    Layer layer(std::move(loaded.image));
-    if (appobj::canvas.getLayerNb() > 0)
-        appobj::canvas.getLayer(0) = std::move(layer);
-    else
-        appobj::canvas.addLayer(std::move(layer));
-    return true;
+void OpenGLEngine::clearMain()
+{
+    m_renderer.retire(std::move(m_main_fbo));
+    m_renderer.retire(std::move(m_main_tex));
 }
 
 bool OpenGLEngine::saveMain(const std::string &path, std::string *error) const

@@ -1,38 +1,29 @@
 #ifndef EDITOR_H
 #define EDITOR_H
-#include "StructParam.h"
-
-// Engines
-#include "RegionGrowingEngine.h"
-
 #include <chrono>
 #include <cstdint>
-#include <memory>
 #include <span>
 #include <string>
 
+#include "core/Image.h"
 #include "gpu/Framebuffer.h"
 #include "gpu/Renderer.h"
 #include "gpu/Texture.h"
 
-#include "Canvas.h"
-
-class OpenGLEngine;
-
-namespace appobj
+namespace core
 {
-    // Created by ImgApp once the GL context exists, destroyed before it goes
-    extern std::unique_ptr<OpenGLEngine> glengine;
-    extern Canvas canvas;
+    class Log;
 }
 
 class OpenGLEngine
 {
 public:
-    explicit OpenGLEngine(const std::string &shader_dir);
+    // Needs a current GL context; must be destroyed before it
+    OpenGLEngine(const std::string &shader_dir, core::Log &log);
 
-    // Loads into layer 0 and the main texture
-    bool openImage(const std::string &path, std::string *error = nullptr);
+    // Shown as RGBA8 whatever the image holds
+    void setMainImage(core::ImageView<const uint8_t> image);
+    void clearMain();
     bool hasImage() const { return !m_main_tex.empty(); }
     const gpu::Texture &mainTexture() const { return m_main_tex; }
     bool saveMain(const std::string &path, std::string *error = nullptr) const;

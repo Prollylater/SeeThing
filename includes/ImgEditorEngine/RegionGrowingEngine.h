@@ -5,14 +5,6 @@
 // Module in charge of region growing
 // TODO Transfer relevant part to cpp and add to cmake
 // TODO add benchmark capacity to output to screen
-class RGEngine;
-
-namespace appobj
-{
-    // Create an engine that withold
-    extern RGEngine rgengine;
-}
-
 // TODO More efficieent way to store it in memory
 class RGEngine
 {

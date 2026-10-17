@@ -51,6 +51,7 @@ target_compile_options(seething_warnings INTERFACE
 add_library(seething_core STATIC
     ${SOURCE_DIR}/core/Color.cpp
     ${SOURCE_DIR}/core/ImageIO.cpp
+    ${SOURCE_DIR}/core/Log.cpp
 )
 target_compile_features(seething_core PUBLIC cxx_std_20)
 target_include_directories(seething_core PUBLIC ${SOURCE_DIR})
@@ -70,26 +71,19 @@ target_link_libraries(seething_gpu PUBLIC seething_core glad PRIVATE seething_wa
 
 
 set(PROJECT_SRC
-    #Core
-    ${SOURCE_DIR}/main.cpp
-    ${SOURCE_DIR}/Core/ImgApp.cpp
-    #Models
+    ${SOURCE_DIR}/app/main.cpp
+    ${SOURCE_DIR}/app/App.cpp
+    ${SOURCE_DIR}/app/Platform.cpp
+    ${SOURCE_DIR}/ui/Shell.cpp
+    ${SOURCE_DIR}/ui/CanvasWidget.cpp
+    ${SOURCE_DIR}/ui/panels/CanvasPanel.cpp
+    ${SOURCE_DIR}/ui/panels/LogPanel.cpp
+    ${SOURCE_DIR}/ui/panels/ResultPanel.cpp
+    ${SOURCE_DIR}/ui/panels/SegmentationPanel.cpp
     ${SOURCE_DIR}/Models/Canvas.cpp
-    #ImgEditorEngine
     ${SOURCE_DIR}/ImgEditorEngine/ImgEditorEngine.cpp
     ${SOURCE_DIR}/ImgEditorEngine/RegionGrowingAlg.cpp
     ${SOURCE_DIR}/ImgEditorEngine/Regions.cpp
-    #RenderContext
-    ${SOURCE_DIR}/RenderContext/ImGuiAppContext.cpp
-    ${SOURCE_DIR}/RenderContext/OpenGLContext.cpp
-    #UiWindows
-    ${SOURCE_DIR}/UiWindows/Dockspace.cpp
-    ${SOURCE_DIR}/UiWindows/ImgEditor.cpp
-    ${SOURCE_DIR}/UiWindows/RGPanel.cpp
-    ${SOURCE_DIR}/UiWindows/UiCompUtils.cpp
-    ${SOURCE_DIR}/UiWindows/GlobalStates.cpp
-    ${SOURCE_DIR}/ui/CanvasWidget.cpp
-    #Utils
     ${SOURCE_DIR}/Utils/AssetPath.cpp
     ${SOURCE_DIR}/Utils/Mat.cpp
     ${SOURCE_DIR}/Utils/Helper.cpp
@@ -99,9 +93,6 @@ set(INCLUDES_DIRS
     ${INCLUDE_DIR}
     ${INCLUDE_DIR}/Models
     ${INCLUDE_DIR}/ImgEditorEngine
-    ${INCLUDE_DIR}/Core
-    ${INCLUDE_DIR}/RenderContext
-    ${INCLUDE_DIR}/UiWindows
     ${INCLUDE_DIR}/Utils
 )
 
