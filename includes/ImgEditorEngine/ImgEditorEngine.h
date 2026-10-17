@@ -5,69 +5,58 @@
 // Engines
 #include "RegionGrowingEngine.h"
 
-#include <vector>
-#include <iostream>
+#include <chrono>
+#include <cstdint>
+#include <memory>
+#include <span>
+#include <string>
 
-#include "glcore.h"
-#include "Buffers.h"
-#include "Program.h"
-#include "Texture.h"
+#include "gpu/Framebuffer.h"
+#include "gpu/Renderer.h"
+#include "gpu/Texture.h"
 
 #include "Canvas.h"
-
-// TODO This might be in need of a lot of refactoring
 
 class OpenGLEngine;
 
 namespace appobj
 {
-    extern OpenGLEngine glengine;
+    // Created by ImgApp once the GL context exists, destroyed before it goes
+    extern std::unique_ptr<OpenGLEngine> glengine;
     extern Canvas canvas;
-    // Create an engine that withold
 }
 
-// TODO Change directory ?
 class OpenGLEngine
 {
+public:
+    explicit OpenGLEngine(const std::string &shader_dir);
 
-    // TODO
-    // Loading pipeline more linked to file browsing   initTextRess(imageress, read_texture<textuc>(1, datapath, matimg));
+    // Loads into layer 0 and the main texture
+    bool openImage(const std::string &path, std::string *error = nullptr);
+    bool hasImage() const { return !m_main_tex.empty(); }
+    const gpu::Texture &mainTexture() const { return m_main_tex; }
+    bool saveMain(const std::string &path, std::string *error = nullptr) const;
+
+    // Pixel coordinates in the main image
+    void paint(std::span<const core::Vec2f> pixels, core::Vec3f color, float size = 2.0f);
+
+    void setResult(core::ImageView<const uint8_t> image);
+    bool hasResult() const { return !m_result_tex.empty(); }
+    const gpu::Texture &resultTexture() const { return m_result_tex; }
+    void clearResult();
+    bool saveResult(const std::string &path, std::string *error = nullptr) const;
+    // Copies the result over the main texture (not over layer 0 yet); false when the sizes differ
+    bool transferResultToMain();
+
+    // Call once per frame, after ImGui rendered
+    void endFrame();
 
 private:
-    // Store Loaded vao
-    BufferIDsGroups loadedvao;
-    // Store Loaded texture
-    TextureResource imageress;
-    // FBO
-    GLuint fbo;
-    // Texture used to render to fbo without frame
-    // TextureResource copytext;
-    // Store main Shader
-    Program prog;
-    // Shader used by the pencil
-    Program prog_colchange;
-    // Freed by flushDeferredDeletes()
-    std::vector<GLuint> pending_texture_deletes;
-
-    // TODO Change active vao or texture
-public:
-    OpenGLEngine();
-
-    // TODO remove remnant of singleton patter here
-
-    OpenGLEngine(const OpenGLEngine &) = delete;
-    OpenGLEngine &operator=(const OpenGLEngine &) = delete;
-    void copyTextureToFBO(GLuint &fbo, int width, int height);
-    bool initImrender();
-    bool outputImg(const char *datapath, GLuint *out_texture, int *out_width, int *out_height);
-    bool outputText(Mat<uint8_t> &image, GLuint *out_texture);
-    bool deleteTexture(GLuint &tex);
-    void flushDeferredDeletes();
-    bool saveTextInst(GLuint &out_texture, const char *filename);
-
-    void renderTexture();
-
-    void renderColChange(std::vector<Vec<GLfloat>> &to_color, const Vec<GLfloat> &color, int width, int height, int pt_size = 5);
+    gpu::Renderer m_renderer;
+    gpu::Texture m_main_tex;
+    gpu::Framebuffer m_main_fbo;
+    gpu::Texture m_result_tex;
+    std::chrono::steady_clock::time_point m_last_shader_check;
 };
 
 #endif

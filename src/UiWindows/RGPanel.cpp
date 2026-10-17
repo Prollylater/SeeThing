@@ -1,10 +1,11 @@
 #include "RGPanel.h"
+#include "MatBridge.h"
 
 // TODO replace all variables by constant use of their respecitve struct param
 // TODO FAILSAFE For the case where we execute without an image defined
 // TODO Add usage of active texture and layer concept
 // TODO Put description where it's necessary
-void ShowSlicParameter(bool &show, GLuint &tex)
+void ShowSlicParameter(bool &show)
 {
     if (!show)
     {
@@ -61,7 +62,7 @@ void ShowSlicParameter(bool &show, GLuint &tex)
         SlicParameter executeparam(c_pix_k, compactness_m, lah_div_str, xyz_current_idx,
                                    div);
 
-        Mat<uint8_t> &activeim = appobj::canvas.getLayer(0).getImage();
+        Mat<uint8_t> activeim = toMat(appobj::canvas.getLayer(0).getImage());
 
         std::cout << "Image Stored in Mat, dispatching with parameter: " << std::endl;
 
@@ -74,8 +75,7 @@ void ShowSlicParameter(bool &show, GLuint &tex)
         Mat<uint8_t>
             regiongrow = appobj::rgengine.dispatch(executeparam, activeim, coloration_current_idx);
         // TODO Dispatch should take care of this ?
-        appobj::glengine.deleteTexture(tex);
-        appobj::glengine.outputText(regiongrow, &tex);
+        appobj::glengine->setResult(viewOf(regiongrow));
     };
     ImGui::EndDisabled();
     ImGui::SameLine();
@@ -111,7 +111,7 @@ void ShowSlicParameter(bool &show, GLuint &tex)
     }
 }
 
-void ShowSeedParameter(bool &show, GLuint &tex)
+void ShowSeedParameter(bool &show)
 {
     // TODO Provide description POpup of each parameter
     // TODO Execute RegionGrowing Global or with selection
@@ -190,15 +190,14 @@ void ShowSeedParameter(bool &show, GLuint &tex)
 
         SeedRGParameter executeparam(threshold, adapt_perc, seednb, funct_current_idx, random, divide, adaptive);
         // TODO GEt active layver
-        Mat<uint8_t> &activeim = appobj::canvas.getLayer(0).getImage();
+        Mat<uint8_t> activeim = toMat(appobj::canvas.getLayer(0).getImage());
 
         Mat<uint8_t>
             regiongrow = appobj::rgengine.dispatch(executeparam, activeim, coloration_current_idx);
         std::cout << "Region Growing done" << std::endl;
         
         // TODO Dispatch should take care of this ?
-        appobj::glengine.deleteTexture(tex);
-        appobj::glengine.outputText(regiongrow, &tex);
+        appobj::glengine->setResult(viewOf(regiongrow));
     };
     ImGui::EndDisabled();
     ImGui::SameLine();
@@ -241,9 +240,6 @@ void ShowSeedParameter(bool &show, GLuint &tex)
 //  TODO The boolean system fro selection is weird
 void ShowRegionGrowingArea()
 {
-    static GLuint display;
-    static bool result_display = false;
-
     bool show = win_states.isTrue(WinStates::rg_panel);
 
     int count_button = 5;
@@ -335,7 +331,7 @@ void ShowRegionGrowingArea()
             // Slic Algorithm Parameter
             // Including the colorspace parameter for labspace
             // The k, the number or retry also that other thing
-            ShowSlicParameter(modeb, display);
+            ShowSlicParameter(modeb);
 
             break;
         case 2:
@@ -343,7 +339,7 @@ void ShowRegionGrowingArea()
             // Seed Algorithm Parameter, the algorithm
             //  The number of seed,
             //  The posibility to place seed manually too
-            ShowSeedParameter(modeb, display);
+            ShowSeedParameter(modeb);
             break;
         case 3:
             modeb = (mode == 3);
@@ -366,15 +362,15 @@ void ShowRegionGrowingArea()
     }
 
     // Own window, submitted outside the panel's Begin/End
-    if (display != 0)
+    if (appobj::glengine->hasResult())
     {
-        result_display = true;
+        bool result_display = true;
         // TODO: Directly use globalstates enum
-        ShowGenDisplayPanel(result_display, display);
+        ShowGenDisplayPanel(result_display);
         // Closing the viewer drops the result, like Reset
         if (!result_display)
         {
-            appobj::glengine.deleteTexture(display);
+            appobj::glengine->clearResult();
         }
     }
 }

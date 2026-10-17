@@ -1,52 +1,43 @@
 #include "ImgApp.h"
+#include "AssetPath.h"
+
+#include <stdexcept>
 
 ImgApp::ImgApp() : main_window()
 {
-
   if (!OpenGlContext::initGlContext(main_window, 1024, 576))
-  {
-    std::cerr << "OpenGLContext initialization failed" << std::endl;
-  }
+    throw std::runtime_error("OpenGL context initialization failed");
 
-  bool eval = ImGuiAppContext::init(main_window);
+  if (!ImGuiAppContext::init(main_window))
+    throw std::runtime_error("ImGui initialization failed");
 
-  if (!eval)
-  {
-    std::cerr << "ImGuiAppContext initialization failed" << std::endl;
-  }
-
-//Not quite convinced by postion
-  // TODO CREATE ENGINE AND DO STUF
-  // Declaring engine here
-  if (!appobj::glengine.initImrender())
-  {
-    std::cerr << "Buffers Initialization failed" << std::endl;
-  }
+  appobj::glengine = std::make_unique<OpenGLEngine>(assetPath("shaders"));
 }
 
+// Swap after ImGui drew; textures released this frame die after that
 void ImgApp::start()
 {
   while (!glfwWindowShouldClose(main_window))
   {
-    // Render
-
-    OpenGlContext::preRender();
+    OpenGlContext::preRender(main_window);
 
     ImGuiAppContext::preRender();
 
     ImGuiAppContext::Render();
 
+    ImGuiAppContext::postRender(main_window);
+
     OpenGlContext::postRender(main_window);
 
-    ImGuiAppContext::postRender();
-
-    appobj::glengine.flushDeferredDeletes();
+    appobj::glengine->endFrame();
   }
 }
+
+// GL objects go first, while the context is alive
 void ImgApp::quit()
 {
+  appobj::glengine.reset();
 
-  // Liberate necessary ressource
   ImGuiAppContext::quit();
 
   OpenGlContext::quit(main_window);

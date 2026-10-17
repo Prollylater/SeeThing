@@ -18,38 +18,38 @@ namespace core
     {
     public:
         ImageView() = default;
-        ImageView(T *px, int w, int h, int c, std::ptrdiff_t stride) : px_(px), w_(w), h_(h), c_(c), stride_(stride) {}
+        ImageView(T *px, int w, int h, int c, std::ptrdiff_t stride) : m_px(px), m_w(w), m_h(h), m_c(c), m_stride(stride) {}
 
-        int width() const { return w_; }
-        int height() const { return h_; }
-        int channels() const { return c_; }
-        std::ptrdiff_t stride() const { return stride_; }
-        bool empty() const { return px_ == nullptr || w_ == 0 || h_ == 0; }
+        int width() const { return m_w; }
+        int height() const { return m_h; }
+        int channels() const { return m_c; }
+        std::ptrdiff_t stride() const { return m_stride; }
+        bool empty() const { return m_px == nullptr || m_w == 0 || m_h == 0; }
 
         T &operator()(int x, int y, int c = 0) const
         {
-            assert(x >= 0 && x < w_ && y >= 0 && y < h_ && c >= 0 && c < c_);
-            return px_[y * stride_ + std::ptrdiff_t(x) * c_ + c];
+            assert(x >= 0 && x < m_w && y >= 0 && y < m_h && c >= 0 && c < m_c);
+            return m_px[y * m_stride + std::ptrdiff_t(x) * m_c + c];
         }
-        T *row(int y) const { return px_ + y * stride_; }
+        T *row(int y) const { return m_px + y * m_stride; }
 
         ImageView sub(int x, int y, int w, int h) const
         {
-            if (x < 0 || y < 0 || w < 0 || h < 0 || x + w > w_ || y + h > h_)
+            if (x < 0 || y < 0 || w < 0 || h < 0 || x + w > m_w || y + h > m_h)
                 throw std::out_of_range("ImageView::sub outside the view");
-            return ImageView(row(y) + std::ptrdiff_t(x) * c_, w, h, c_, stride_);
+            return ImageView(row(y) + std::ptrdiff_t(x) * m_c, w, h, m_c, m_stride);
         }
 
         operator ImageView<const T>() const
             requires(!std::is_const_v<T>)
         {
-            return ImageView<const T>(px_, w_, h_, c_, stride_);
+            return ImageView<const T>(m_px, m_w, m_h, m_c, m_stride);
         }
 
     private:
-        T *px_ = nullptr;
-        int w_ = 0, h_ = 0, c_ = 0;
-        std::ptrdiff_t stride_ = 0;
+        T *m_px = nullptr;
+        int m_w = 0, m_h = 0, m_c = 0;
+        std::ptrdiff_t m_stride = 0;
     };
 
     // Owning, interleaved, row-major pixel buffer: index (y * width + x) * channels + c
@@ -58,25 +58,25 @@ namespace core
     {
     public:
         Image() = default;
-        Image(int w, int h, int c, ColorSpace space = ColorSpace::sRGB) : space_(space)
+        Image(int w, int h, int c, ColorSpace space = ColorSpace::sRGB) : m_space(space)
         {
             if (w < 0 || h < 0 || c < 0)
                 throw std::invalid_argument("Image: negative size");
-            w_ = w;
-            h_ = h;
-            c_ = c;
+            m_w = w;
+            m_h = h;
+            m_c = c;
             if (size() > 0)
-                px_ = new T[size()](); // () zero-fills
+                m_px = new T[size()](); // () zero-fills
         }
-        ~Image() { delete[] px_; }
+        ~Image() { delete[] m_px; }
 
-        Image(const Image &o) : w_(o.w_), h_(o.h_), c_(o.c_), space_(o.space_), px_(o.size() ? new T[o.size()] : nullptr)
+        Image(const Image &o) : m_w(o.m_w), m_h(o.m_h), m_c(o.m_c), m_space(o.m_space), m_px(o.size() ? new T[o.size()] : nullptr)
         {
-            std::copy(o.px_, o.px_ + o.size(), px_);
+            std::copy(o.m_px, o.m_px + o.size(), m_px);
         }
         Image(Image &&o) noexcept
-            : w_(std::exchange(o.w_, 0)), h_(std::exchange(o.h_, 0)), c_(std::exchange(o.c_, 0)),
-              space_(o.space_), px_(std::exchange(o.px_, nullptr)) {}
+            : m_w(std::exchange(o.m_w, 0)), m_h(std::exchange(o.m_h, 0)), m_c(std::exchange(o.m_c, 0)),
+              m_space(o.m_space), m_px(std::exchange(o.m_px, nullptr)) {}
         // By value: one operator for copy and move, and the old buffer is only freed after the copy succeeded
         Image &operator=(Image o) noexcept
         {
@@ -85,60 +85,60 @@ namespace core
         }
         void swap(Image &o) noexcept
         {
-            std::swap(w_, o.w_);
-            std::swap(h_, o.h_);
-            std::swap(c_, o.c_);
-            std::swap(space_, o.space_);
-            std::swap(px_, o.px_);
+            std::swap(m_w, o.m_w);
+            std::swap(m_h, o.m_h);
+            std::swap(m_c, o.m_c);
+            std::swap(m_space, o.m_space);
+            std::swap(m_px, o.m_px);
         }
 
-        std::size_t size() const { return std::size_t(w_) * h_ * c_; }
-        bool empty() const { return px_ == nullptr; }
-        int width() const { return w_; }
-        int height() const { return h_; }
-        int channels() const { return c_; }
-        PixelFormat format() const { return pixelFormatOf<T>(c_); }
-        ColorSpace colorSpace() const { return space_; }
-        void setColorSpace(ColorSpace space) { space_ = space; }
+        std::size_t size() const { return std::size_t(m_w) * m_h * m_c; }
+        bool empty() const { return m_px == nullptr; }
+        int width() const { return m_w; }
+        int height() const { return m_h; }
+        int channels() const { return m_c; }
+        PixelFormat format() const { return pixelFormatOf<T>(m_c); }
+        ColorSpace colorSpace() const { return m_space; }
+        void setColorSpace(ColorSpace space) { m_space = space; }
 
-        T *data() { return px_; }
-        const T *data() const { return px_; }
-        T *row(int y) { return px_ + std::size_t(y) * w_ * c_; }
-        const T *row(int y) const { return px_ + std::size_t(y) * w_ * c_; }
+        T *data() { return m_px; }
+        const T *data() const { return m_px; }
+        T *row(int y) { return m_px + std::size_t(y) * m_w * m_c; }
+        const T *row(int y) const { return m_px + std::size_t(y) * m_w * m_c; }
 
         // Unchecked in release builds: for inner loops
         T &operator()(int x, int y, int c = 0)
         {
             assert(inside(x, y, c));
-            return px_[index(x, y, c)];
+            return m_px[index(x, y, c)];
         }
         const T &operator()(int x, int y, int c = 0) const
         {
             assert(inside(x, y, c));
-            return px_[index(x, y, c)];
+            return m_px[index(x, y, c)];
         }
         T &at(int x, int y, int c = 0)
         {
             if (!inside(x, y, c))
                 throw std::out_of_range("Image::at outside the image");
-            return px_[index(x, y, c)];
+            return m_px[index(x, y, c)];
         }
         const T &at(int x, int y, int c = 0) const { return const_cast<Image &>(*this).at(x, y, c); }
 
-        bool inside(int x, int y, int c = 0) const { return x >= 0 && x < w_ && y >= 0 && y < h_ && c >= 0 && c < c_; }
+        bool inside(int x, int y, int c = 0) const { return x >= 0 && x < m_w && y >= 0 && y < m_h && c >= 0 && c < m_c; }
 
-        void fill(T value) { std::fill(px_, px_ + size(), value); }
+        void fill(T value) { std::fill(m_px, m_px + size(), value); }
 
-        ImageView<T> view() { return ImageView<T>(px_, w_, h_, c_, std::ptrdiff_t(w_) * c_); }
-        ImageView<const T> view() const { return ImageView<const T>(px_, w_, h_, c_, std::ptrdiff_t(w_) * c_); }
+        ImageView<T> view() { return ImageView<T>(m_px, m_w, m_h, m_c, std::ptrdiff_t(m_w) * m_c); }
+        ImageView<const T> view() const { return ImageView<const T>(m_px, m_w, m_h, m_c, std::ptrdiff_t(m_w) * m_c); }
         operator ImageView<const T>() const { return view(); }
 
     private:
-        std::size_t index(int x, int y, int c) const { return (std::size_t(y) * w_ + x) * c_ + c; }
+        std::size_t index(int x, int y, int c) const { return (std::size_t(y) * m_w + x) * m_c + c; }
 
-        int w_ = 0, h_ = 0, c_ = 0;
-        ColorSpace space_ = ColorSpace::sRGB;
-        T *px_ = nullptr; // owned
+        int m_w = 0, m_h = 0, m_c = 0;
+        ColorSpace m_space = ColorSpace::sRGB;
+        T *m_px = nullptr; // owned
     };
 
     template <class T>

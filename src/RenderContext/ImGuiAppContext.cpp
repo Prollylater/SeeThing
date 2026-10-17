@@ -10,8 +10,6 @@ void initGlobalStyle()
 {
 }
 
-// Initialize the Vao allowing to render the image as a texture
-// This vao is always a plane taking a Mat<uint8> data as texture.
 bool init(GLFWwindow*& window)
 {
 
@@ -71,9 +69,15 @@ void Render()
     ShowRegionGrowingArea();
 }
 
-void postRender()
+void postRender(GLFWwindow *window)
 {
     ImGui::Render();
+    int width = 0, height = 0;
+    glfwGetFramebufferSize(window, &width, &height);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, width, height);
+    glClearColor(0.2f, 0.2f, 0.7f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     ImGuiIO &io = ImGui::GetIO();

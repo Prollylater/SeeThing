@@ -19,14 +19,12 @@ namespace ImGuiAppContext
 
     void initGlobalStyle();
 
-    // Initialize the Vao allowing to render the image as a texture
-    // This vao is always a plane taking a Mat<uint8> data as texture.
     bool init(GLFWwindow*& window);
 
     void preRender();
 
     void Render();
-    void postRender();
+    void postRender(GLFWwindow *window);
 
     void quit();
 }

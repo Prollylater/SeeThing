@@ -1,393 +1,105 @@
 #include "ImgEditorEngine.h"
-#include "AssetPath.h"
 
-// Define instance of the app object which each correspond to a feature
+#include "core/Color.h"
+#include "core/ImageIO.h"
+
 namespace appobj
 {
-    //Some take their data directly from this object
-    //This object is not updated
     Canvas canvas;
-    // Opengl Engine declared elsewhere
-    OpenGLEngine glengine;
-    // Imgeditor Engine declared elsewhere
-    // IFdefine module rg
+    std::unique_ptr<OpenGLEngine> glengine;
     RGEngine rgengine;
-
 }
 
-OpenGLEngine::OpenGLEngine() //: activevao(0), activetexture(0)
+OpenGLEngine::OpenGLEngine(const std::string &shader_dir) : m_renderer(shader_dir)
 {
-    // loadedvao.resize(1);
-    // imageress.resize(1);
-    //  Create a buffers for the first and  only vao in currrent version
-
-    /*// Context initialization
-    if (!initImrender())
-     {
-         std::cerr << "Buffers Initialization failed" << std::endl;
-     }*/
-};
-
-bool OpenGLEngine::initImrender()
-{
-    // Initialize the Vao allowing to render the image as a texture
-    // This vao is always a plane taking a Mat<uint8> data as texture.
-    // Create an unique fbo and it's designated rendering texture
-    // fbo = createFBO(fbotext);
-    // prog.init("shader.vs", "shader.fs");
-    // prog.init("colorchange.vs", "colorchange.fs");
-    std::vector<Vec<float>> canvas = {
-        Vec(-1.0f, -1.0f, 0.0f),
-        Vec(-1.0f, 1.0f, 0.0f),
-        Vec(1.0f, 1.0f, 0.0f),
-        Vec(1.0f, -1.0f, 0.0f)};
-
-    std::vector<Vec<float>> canvastext = {
-        Vec(0.0f, 0.0f, 0.0f),
-        Vec(0.0f, 1.0f, 0.0f),
-        Vec(1.0f, 1.0f, 0.0f),
-        Vec(1.0f, 0.0f, 0.0f)
-
-    };
-
-    std::vector<GLuint> indices = {0, 1, 2, 2, 3, 0};
-
-    loadedvao = createBuffers(canvas, indices, canvastext);
-    // TODO Array of shader for each change
-    // Built once, never per draw call
-    prog.init(assetPath("shaders/imgoutput.vs").c_str(), assetPath("shaders/imgoutput.fs").c_str());
-    prog_colchange.init(assetPath("shaders/colchange.vs").c_str(), assetPath("shaders/colchange.fs").c_str());
-
-    return true;
 }
 
-// TODO better management of canvas and current state to avoid this treatment
-// Save an image
-// Invoked when the image wasn't already stored in a canvas
-// Result of operation etc..
-bool OpenGLEngine::saveTextInst(GLuint &out_texture, const char *filename)
+bool OpenGLEngine::openImage(const std::string &path, std::string *error)
 {
-    GLint width, height;
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glBindTexture(GL_TEXTURE_2D, out_texture);
-    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
-    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
-    // TODO Channles data not stored
-    // glGetTexImage below always reads GL_RGB
-    int channels = 3;
-    int size = width * height * (channels);
-    GLint previous_alignment = 4;
-    glGetIntegerv(GL_PACK_ALIGNMENT, &previous_alignment);
-    glPixelStorei(GL_PACK_ALIGNMENT, 1);
-
-    std::cout << "Size related to file writing (w, h, chan): " << std::endl;
-    std::cout << width <<" "<< height << channels << std::endl;
-    uint8_t *pixels = new uint8_t[size];
-
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-    glPixelStorei(GL_PACK_ALIGNMENT, previous_alignment);
-    GLenum error = glGetError();
-    if (error != GL_NO_ERROR)
+    core::LoadResult loaded = core::loadImage(path, 0);
+    if (!loaded.ok())
     {
-        std::cerr << "Error during saving  imagefrom texture " << error << std::endl;
-        delete[] pixels;
+        if (error)
+            *error = loaded.error;
         return false;
     }
-    // TODO GIve choice between mutiple format
-    writeImgJpg(filename, pixels,  width, height, channels,true);
-    delete[] pixels;
-    return true;
-}
 
-
-/*
-bool OpenGLEngine::saveCurrentDisplay(GLuint &out_texture, const char *filename)
-{
-    GLuint textureObj = ...; // the texture object - glGenTextures
-
-    GLuint fbo;
-    glGenFramebuffers(1, &fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureObj, 0);
-
-    int data_size = mWidth * mHeight * 4;
-    GLubyte* pixels = new GLubyte[mWidth * mHeight * 4];
-    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glDeleteFramebuffers(1, &fbo);
-        GLenum error = glGetError();
-        if (error != GL_NO_ERROR)
-        {
-            std::cerr << "Error during saving from fbo: " << error << std::endl;
-        }
-        return 1;}
-    */
-
-// Create a texture using the passed image data
-bool OpenGLEngine::outputText(Mat<uint8_t> &image, GLuint *out_texture)
-{
-
-    *out_texture = makeTextureMat<uint8_t, textuc>(0, image);
-
-    GLenum error = glGetError();
-    if (error != GL_NO_ERROR)
-    {
-        std::cerr << "Error durings engine texture loading function: " << error << std::endl;
-    }
-    return 1;
-}
-
-// TOODO change names of the "output" functions
-// Layer choice
-// Handling current vector states
-// Lot of thing to modify
-// Load an image
-bool OpenGLEngine::outputImg(const char *datapath, GLuint *out_texture, int *out_width, int *out_height)
-{
-    // Will always add at the specified Layer
-    // Load image in main canvas, actually, should be Load to main canvas somewhere else -> Dispatch to some disparche engine
-    //->Dispatch to some other thing Thus Canvas don't need any
-    // TODO Canvas set up Should not be handled here
-
-    // Simplify the call on the two line under
-    Mat<uint8_t> tmpmat;
-
-    // Load image in two texture and in the mat object
-    // Second texture may have no purpose out in the current build
+    // RGBA8 whatever the file holds: the main texture is a render target
+    gpu::Texture tex = gpu::Texture::fromImage<uint8_t>(core::toRGBA8(loaded.image));
+    gpu::Framebuffer fbo(tex);
     // The old texture may still be drawn this frame
-    deleteTexture(imageress.texture_id);
-    glDeleteSamplers(1, &imageress.sampler_id);
-    initTextRess(imageress, read_texture<textuc>(0, datapath, tmpmat));
-
-    *out_width = tmpmat.getCols();
-    *out_height = tmpmat.getRows();
-
-    Layer new_img(std::move(tmpmat));
+    m_renderer.retire(std::move(m_main_fbo));
+    m_renderer.retire(std::move(m_main_tex));
+    m_main_tex = std::move(tex);
+    m_main_fbo = std::move(fbo);
 
     // Currently only deal with the layer 0: replace it, don't stack a new one
+    Layer layer(std::move(loaded.image));
     if (appobj::canvas.getLayerNb() > 0)
-    {
-        appobj::canvas.getLayer(0) = std::move(new_img);
-    }
+        appobj::canvas.getLayer(0) = std::move(layer);
     else
-    {
-        appobj::canvas.addLayer(std::move(new_img));
-    }
-
-    // TODO Canvas set up Should not be handled here
-    // TODO, only init for the first texture in the vector
-    // Implement mangament for multiple layers
-
-    // Re-target the fbo to the new texture
-    if (fbo != 0)
-    {
-        glDeleteFramebuffers(1, &fbo);
-    }
-    fbo = createFBO(imageress);
-    // glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-    //  FBO texture
-    *out_texture = imageress.texture_id;
-    // NO rendering is necessary here
-
-    GLenum error = glGetError();
-    if (error != GL_NO_ERROR)
-    {
-        std::cerr << "Error durings engine texture loading function: " << error << std::endl;
-    }
-    return 1;
-}
-
-/*
-void OpenGLEngine::renderTexture()
-{
-
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    prog.use();
-    bindTexture(imageress[activetexture], prog.shader_id, "image_color");
-    glBindVertexArray(loadedvao[activevao].m_vao_id);
-    glDrawElements( GL_TRIANGLE_STRIP, loadedvao[activevao].m_count, GL_UNSIGNED_INT, 0);
-    GLenum error = glGetError();
-
-    if (error != GL_NO_ERROR)
-    {
-        std::cerr << "Error durings engline render texture function: " << error << std::endl;
-    }
-    // Take care of each Ui components
-}
-*/
-
-// Deferred: ImGui may still draw tex this frame
-bool OpenGLEngine::deleteTexture(GLuint &tex)
-{
-    if (tex == 0)
-    {
-        return false;
-    }
-    pending_texture_deletes.push_back(tex);
-    tex = 0;
+        appobj::canvas.addLayer(std::move(layer));
     return true;
 }
 
-// Call once per frame, after ImGui rendered
-void OpenGLEngine::flushDeferredDeletes()
+bool OpenGLEngine::saveMain(const std::string &path, std::string *error) const
 {
-    if (pending_texture_deletes.empty())
+    if (!hasImage())
     {
-        return;
+        if (error)
+            *error = "No image to save";
+        return false;
     }
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glDeleteTextures(static_cast<GLsizei>(pending_texture_deletes.size()), pending_texture_deletes.data());
-    pending_texture_deletes.clear();
+    return core::saveImage(path, m_main_tex.download8(), error);
 }
 
-// TODO, the change here is not transfered to the canvas
-//  Render a full texture to the main texture
-void OpenGLEngine::copyTextureToFBO(GLuint &tex, int width, int height)
+void OpenGLEngine::paint(std::span<const core::Vec2f> pixels, core::Vec3f color, float size)
 {
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    // Set viewport to correct size
-
-    glViewport(0, 0, width, height);
-
-    prog.use();
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
-    {
-        std::cerr << "Framebuffer not complete: " << fboStatus << std::endl;
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        return;
-    }
-    glBindVertexArray(loadedvao.getVao());
-
-    // Create a temporary Ressource holder
-    TextureResource temp_tex_res;
-    initTextRess(temp_tex_res, tex);
-
-    bindTexture(temp_tex_res, prog.shader_id, "image_color");
-    std::cout << "id" << prog.shader_id << std::endl;
-    glDrawElements(GL_TRIANGLES, loadedvao.m_count, GL_UNSIGNED_INT, 0);
-
-    glBindVertexArray(0);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glDeleteSamplers(1, &temp_tex_res.sampler_id);
-
-    GLenum error = glGetError();
-    if (error != GL_NO_ERROR)
-    {
-        std::cerr << "Error durings engine update texture function: " << error << std::endl;
-    }
+    if (hasImage())
+        m_renderer.drawPoints(m_main_fbo, pixels, color, size);
 }
 
-/////////////////////////////////////Dispatch
-
-// TODO Look into the performance and overhead cost here
-void OpenGLEngine::renderColChange(std::vector<Vec<GLfloat>> &to_color, const Vec<GLfloat> &color, int width, int height, int pt_size)
+void OpenGLEngine::setResult(core::ImageView<const uint8_t> image)
 {
-    glEnable(GL_PROGRAM_POINT_SIZE);
+    m_renderer.retire(std::move(m_result_tex));
+    if (!image.empty())
+        m_result_tex = gpu::Texture::fromImage(image);
+}
 
-    BufferIDsGroups work_vao = createBuffers(to_color);
+void OpenGLEngine::clearResult()
+{
+    m_renderer.retire(std::move(m_result_tex));
+}
 
-    // Set viewport to correct size
-    glViewport(0, 0, width, height);
-
-    prog_colchange.use();
-    GLenum error = glGetError();
-    if (error != GL_NO_ERROR)
+bool OpenGLEngine::saveResult(const std::string &path, std::string *error) const
+{
+    if (!hasResult())
     {
-        std::cerr << " durdfdfdf update texture function: " << error << std::endl;
+        if (error)
+            *error = "No result to save";
+        return false;
     }
-    // TODP
-    //  Correct fbo could be passed by a "dispatcher" handling the current layer
+    return core::saveImage(path, m_result_tex.download8(), error);
+}
 
-    // glBindFramebuffer(GL_FRAMEBUFFER, p_fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+bool OpenGLEngine::transferResultToMain()
+{
+    if (!hasImage() || !hasResult() || m_result_tex.width() != m_main_tex.width() || m_result_tex.height() != m_main_tex.height())
+        return false;
+    m_renderer.blit(m_result_tex, m_main_fbo);
+    return true;
+}
 
-    if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
+void OpenGLEngine::endFrame()
+{
+    m_renderer.endFrame();
+#ifndef NDEBUG
+    // Edited shaders apply without a restart
+    const auto now = std::chrono::steady_clock::now();
+    if (now - m_last_shader_check > std::chrono::milliseconds(500))
     {
-        std::cerr << "Framebuffer not complete: " << fboStatus << std::endl;
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        return;
+        m_last_shader_check = now;
+        m_renderer.shaders().reloadChanged();
     }
-    glBindVertexArray(work_vao.getVao());
-    prog_colchange.addUniform3("new_color", color);
-    prog_colchange.addUniform1("text_height", height);
-    prog_colchange.addUniform1("text_width", width);
-    prog_colchange.addUniform1("pt_size", pt_size);
-
-    // Directly use the size of the to color arrray sinnce no ebo were crearted for this
-    // glDrawElements(GL_POINTS, to_color.size(), GL_UNSIGNED_INT, 0);
-    //TODO create draw function that cna make this choice
-    glDrawArrays(GL_POINTS, 0, to_color.size()); // Draw 1 point
-
-    error = glGetError();
-    if (error != GL_NO_ERROR)
-    {
-        std::cerr << " durings rendercolor  update texture function: " << error << std::endl;
-    }
-
-    glBindVertexArray(0);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glDisable(GL_PROGRAM_POINT_SIZE);
-
-    freeBuffers(work_vao);
-    error = glGetError();
-
-    if (error != GL_NO_ERROR)
-    {
-        std::cerr << "Error during color update  function: " << error << std::endl;
-    }
-    // Take care of each Ui components
+#endif
 }
-
-// TODO delete thsi
-
-// OLD TEst
-
-/*
-// Assuming 3 bytes per pixel for GL_RGB
-int size = width * height * 3;
-std::cout << width << "Image in out " << height << std::endl;
-uint8_t* pixels = new uint8_t[size];
-
-glGetTexImage(GL_TEXTURE_2D,0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-uint8_t* pixelsv = new uint8_t[size];
-std::memcpy(pixelsv,pixels, size);
-
-
-std::cout << width << "Image iddn out " << height << std::endl;
-
-Mat<uint8_t>outtexsez(pixels, height, width, 3);
-writeImgJpg("./trucssd.jpg",outtexsez ,true);
-
-if (width > 0 && height > 0)
-{
-    std::cout << "Texture is valid with width: " << width << " and height: " << height << std::endl;
-}
-else
-{
-    std::cout << "Texture is not valid or not properly set with width: " << width << " and height: " << height << std::endl;
-}
-if (glIsTexture(imageress.texture_id))
-{
-    std::cout << "Texture ID is valid." << std::endl;
-}
-else
-{
-    std::cout << "Texture ID is not valid." << std::endl;
-}
-  GLint width, height;
-glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
-glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
-
-
-
-*/

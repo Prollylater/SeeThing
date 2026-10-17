@@ -8,9 +8,9 @@
 #include <string>
 
 
-void ShowSlicParameter(bool &show , GLuint& tex );
+void ShowSlicParameter(bool &show);
 
-void ShowSeedParameter(bool &show , GLuint& tex);
+void ShowSeedParameter(bool &show);
 
 void ShowRegionGrowingArea();
 

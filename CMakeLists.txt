@@ -58,6 +58,17 @@ target_include_directories(seething_core SYSTEM PRIVATE ${INCLUDE_DIR}/3rdParty)
 target_link_libraries(seething_core PRIVATE seething_warnings)
 
 
+add_library(seething_gpu STATIC
+    ${SOURCE_DIR}/gpu/DebugOutput.cpp
+    ${SOURCE_DIR}/gpu/Framebuffer.cpp
+    ${SOURCE_DIR}/gpu/Program.cpp
+    ${SOURCE_DIR}/gpu/Renderer.cpp
+    ${SOURCE_DIR}/gpu/ShaderCache.cpp
+    ${SOURCE_DIR}/gpu/Texture.cpp
+)
+target_link_libraries(seething_gpu PUBLIC seething_core glad PRIVATE seething_warnings)
+
+
 set(PROJECT_SRC
     #Core
     ${SOURCE_DIR}/main.cpp
@@ -68,10 +79,6 @@ set(PROJECT_SRC
     ${SOURCE_DIR}/ImgEditorEngine/ImgEditorEngine.cpp
     ${SOURCE_DIR}/ImgEditorEngine/RegionGrowingAlg.cpp
     ${SOURCE_DIR}/ImgEditorEngine/Regions.cpp
-    #Openglutils
-    ${SOURCE_DIR}/Openglutils/Buffers.cpp
-    ${SOURCE_DIR}/Openglutils/Program.cpp
-    ${SOURCE_DIR}/Openglutils/Texture.cpp
     #RenderContext
     ${SOURCE_DIR}/RenderContext/ImGuiAppContext.cpp
     ${SOURCE_DIR}/RenderContext/OpenGLContext.cpp
@@ -81,9 +88,9 @@ set(PROJECT_SRC
     ${SOURCE_DIR}/UiWindows/RGPanel.cpp
     ${SOURCE_DIR}/UiWindows/UiCompUtils.cpp
     ${SOURCE_DIR}/UiWindows/GlobalStates.cpp
+    ${SOURCE_DIR}/ui/CanvasWidget.cpp
     #Utils
     ${SOURCE_DIR}/Utils/AssetPath.cpp
-    ${SOURCE_DIR}/Utils/Imloader.cpp
     ${SOURCE_DIR}/Utils/Mat.cpp
     ${SOURCE_DIR}/Utils/Helper.cpp
 )
@@ -93,7 +100,6 @@ set(INCLUDES_DIRS
     ${INCLUDE_DIR}/Models
     ${INCLUDE_DIR}/ImgEditorEngine
     ${INCLUDE_DIR}/Core
-    ${INCLUDE_DIR}/Openglutils
     ${INCLUDE_DIR}/RenderContext
     ${INCLUDE_DIR}/UiWindows
     ${INCLUDE_DIR}/Utils
@@ -104,7 +110,7 @@ add_executable(seething ${PROJECT_SRC})
 target_compile_features(seething PRIVATE cxx_std_20)
 target_include_directories(seething PRIVATE ${INCLUDES_DIRS})
 target_include_directories(seething SYSTEM PRIVATE ${INCLUDE_DIR}/3rdParty)
-target_link_libraries(seething PRIVATE seething_core imgui glad glfw seething_warnings)
+target_link_libraries(seething PRIVATE seething_core seething_gpu imgui glad glfw seething_warnings)
 
 if(OpenMP_CXX_FOUND)
     target_link_libraries(seething PRIVATE OpenMP::OpenMP_CXX)
@@ -131,7 +137,18 @@ if(SEETHING_BUILD_TESTS)
         tests/core/test_image.cpp
         tests/core/test_color.cpp
         tests/core/test_imageio.cpp
+        tests/ui/test_canvas_view.cpp
     )
     target_link_libraries(seething_tests PRIVATE seething_core doctest::doctest seething_warnings)
     add_test(NAME core COMMAND seething_tests)
+
+    # Headless GL 4.5 through EGL; skipped (exit 77) where no context can be made
+    add_executable(seething_gpu_tests
+        tests/gpu/test_main.cpp
+        tests/gpu/test_gpu.cpp
+    )
+    target_compile_definitions(seething_gpu_tests PRIVATE SEETHING_SHADER_DIR="${CMAKE_CURRENT_SOURCE_DIR}/ressources/shaders")
+    target_link_libraries(seething_gpu_tests PRIVATE seething_gpu glfw doctest::doctest seething_warnings)
+    add_test(NAME gpu COMMAND seething_gpu_tests)
+    set_tests_properties(gpu PROPERTIES SKIP_RETURN_CODE 77)
 endif()

@@ -8,6 +8,18 @@
 // Small fixed-size math: colour matrices, 3x3 kernels, 2D transforms. Image-sized data lives in Image<T>.
 namespace core
 {
+    struct Vec2f
+    {
+        float x = 0, y = 0;
+
+        friend Vec2f operator+(Vec2f a, Vec2f b) { return {a.x + b.x, a.y + b.y}; }
+        friend Vec2f operator-(Vec2f a, Vec2f b) { return {a.x - b.x, a.y - b.y}; }
+        friend Vec2f operator*(Vec2f a, float s) { return {a.x * s, a.y * s}; }
+        friend Vec2f operator/(Vec2f a, float s) { return {a.x / s, a.y / s}; }
+        Vec2f &operator+=(Vec2f b) { return *this = *this + b; }
+        friend bool operator==(Vec2f a, Vec2f b) = default;
+    };
+
     struct Vec3f
     {
         float x = 0, y = 0, z = 0;
