@@ -11,6 +11,7 @@
 #include <chrono>
 #include <filesystem>
 #include <format>
+#include <functional>
 
 namespace
 {
@@ -134,18 +135,42 @@ void App::jumpTo(std::size_t cursor)
         m_doc.redo();
 }
 
-bool App::beginStroke()
+const doc::Layer *App::paintableLayer()
 {
     const doc::Layer *layer = m_doc.activeLayer();
-    if (!layer)
-        return false;
-    if (layer->props().locked || !layer->props().visible)
+    if (layer && (layer->props().locked || !layer->props().visible))
     {
         m_log.warn("{} is {}; nothing painted", layer->props().name, layer->props().locked ? "locked" : "hidden");
-        return false;
+        return nullptr;
     }
+    return layer;
+}
+
+bool App::beginStroke()
+{
+    const doc::Layer *layer = paintableLayer();
+    if (!layer)
+        return false;
+    endStroke();
     m_gpu.beginStroke(m_doc, layer->id());
+    m_stroke_label = "Pencil";
     return true;
+}
+
+bool App::beginStamp(OpenGLEngine::StampStyle style)
+{
+    const doc::Layer *layer = paintableLayer();
+    if (!layer)
+        return false;
+    endStroke();
+    m_gpu.beginStamp(m_doc, layer->id(), style);
+    m_stroke_label = style.erase ? "Eraser" : "Brush";
+    return true;
+}
+
+void App::stampDabs(std::span<const core::Vec2f> centers, float diameter, float hardness, float flow)
+{
+    m_gpu.stampDabs(centers, diameter, hardness, flow);
 }
 
 void App::strokePoints(std::span<const core::Vec2f> pixels, core::Vec3f color, float size)
@@ -164,7 +189,7 @@ void App::endStroke()
     const core::Recti r = stroke->rect;
     for (int y = 0; y < r.h; ++y)
         std::copy_n(stroke->pixels.row(y), std::size_t(r.w) * 4, pixels.row(r.y + y) + std::size_t(r.x) * 4);
-    rec.commit("Pencil");
+    rec.commit(m_stroke_label);
 }
 
 core::Image<std::uint8_t> App::activePixels() const
@@ -202,7 +227,8 @@ bool App::bucketFill(core::Vec2i p, float threshold, int compare, std::array<std
     }
     endStroke();
     doc::Shape region;
-    const double ms = millisecondsOf([&] { region = growRegion(activePixels(), p, threshold, compare); });
+    // Limited to the selection: the region can't leak out through an unselected gap
+    const double ms = millisecondsOf([&] { region = growRegion(activePixels(), p, threshold, compare, m_doc.hasSelection() ? &m_doc.selection() : nullptr); });
     const bool filled = doc::fillMask(m_doc, layer->id(), region.mask, region.bounds, rgba, "Bucket fill");
     m_log.info("Bucket fill at {}, {}: {} x {} box, {:.0f} ms", p.x, p.y, region.bounds.w, region.bounds.h, ms);
     return filled;
@@ -220,18 +246,39 @@ bool App::magicWand(core::Vec2i p, float threshold, int compare, doc::SelectMode
     return doc::applySelection(m_doc, region, mode, label);
 }
 
+core::Image<std::uint8_t> App::runOnActive(const std::function<Mat<uint8_t>(const Mat<uint8_t> &, const Mat<uint8_t> *)> &run, double &ms)
+{
+    const core::Image<std::uint8_t> source = activePixels();
+    const Mat<uint8_t> input = toMat(source);
+    Mat<uint8_t> roi;
+    const bool limited = m_doc.hasSelection();
+    if (limited)
+        roi = toMat(m_doc.selection());
+    Mat<uint8_t> output;
+    ms = millisecondsOf([&] { output = run(input, limited ? &roi : nullptr); });
+    core::Image<std::uint8_t> result = copyOf(viewOf(output));
+    // Outside the selection the result shows the source, not black
+    if (limited && result.channels() == source.channels())
+        for (int y = 0; y < result.height(); ++y)
+            for (int x = 0; x < result.width(); ++x)
+                if (m_doc.selection()(x, y) < 128)
+                    for (int c = 0; c < result.channels(); ++c)
+                        result(x, y, c) = source(x, y, c);
+    return result;
+}
+
 void App::runSlic(const SlicParameter &param, int coloration)
 {
     const doc::Layer *layer = m_doc.activeLayer();
     if (!layer)
         return;
     endStroke();
-    Mat<uint8_t> input = toMat(activePixels());
-    Mat<uint8_t> output;
-    const double ms = millisecondsOf([&] { output = m_rg.dispatch(param, input, coloration); });
+    double ms = 0;
+    core::Image<std::uint8_t> result = runOnActive([&](const Mat<uint8_t> &in, const Mat<uint8_t> *roi) { return m_rg.dispatch(param, in, coloration, roi); }, ms);
+    const char *where = m_doc.hasSelection() ? " in the selection" : "";
     m_result_source = layer->id();
-    setResult(copyOf(viewOf(output)), std::format("SLIC K {}", param.m_K), std::format("SLIC: K {}, compactness {}", param.m_K, param.m_m));
-    m_log.info("SLIC on {}: K {}, compactness {}, {:.0f} ms", layer->props().name, param.m_K, param.m_m, ms);
+    setResult(std::move(result), std::format("SLIC K {}", param.m_K), std::format("SLIC: K {}, compactness {}{}", param.m_K, param.m_m, where));
+    m_log.info("SLIC on {}{}: K {}, compactness {}, {:.0f} ms", layer->props().name, where, param.m_K, param.m_m, ms);
 }
 
 void App::runSeeded(const SeedRGParameter &settings, int coloration)
@@ -253,13 +300,13 @@ void App::runSeeded(const SeedRGParameter &settings, int coloration)
         param.m_seednb = int(param.m_points.size());
     }
     endStroke();
-    Mat<uint8_t> input = toMat(activePixels());
-    Mat<uint8_t> output;
-    const double ms = millisecondsOf([&] { output = m_rg.dispatch(param, input, coloration); });
+    double ms = 0;
+    core::Image<std::uint8_t> result = runOnActive([&](const Mat<uint8_t> &in, const Mat<uint8_t> *roi) { return m_rg.dispatch(param, in, coloration, roi); }, ms);
+    const char *where = m_doc.hasSelection() ? " in the selection" : "";
     m_result_source = layer->id();
-    setResult(copyOf(viewOf(output)), std::format("Seeded {} seeds", param.m_seednb),
-              std::format("Seeded growing: {} seeds, threshold {:.1f}", param.m_seednb, param.m_threshold));
-    m_log.info("Seeded growing on {}: {} seeds, threshold {:.1f}, {:.0f} ms", layer->props().name, param.m_seednb, param.m_threshold, ms);
+    setResult(std::move(result), std::format("Seeded {} seeds", param.m_seednb),
+              std::format("Seeded growing: {} seeds, threshold {:.1f}{}", param.m_seednb, param.m_threshold, where));
+    m_log.info("Seeded growing on {}{}: {} seeds, threshold {:.1f}, {:.0f} ms", layer->props().name, where, param.m_seednb, param.m_threshold, ms);
 }
 
 void App::setResult(core::Image<std::uint8_t> image, std::string label, std::string origin)

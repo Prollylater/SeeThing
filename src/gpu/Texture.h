@@ -39,6 +39,7 @@ namespace gpu
         void upload(int x, int y, core::ImageView<const std::uint8_t> image);
         core::Image<std::uint8_t> download8() const;
         core::Image<std::uint8_t> download8(core::Recti rect) const;
+        core::Image<float> downloadFloat() const;
 
         GLuint id() const { return m_tex.get(); }
         int width() const { return m_w; }

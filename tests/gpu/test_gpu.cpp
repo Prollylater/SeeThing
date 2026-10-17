@@ -5,6 +5,7 @@
 #include "gpu/Renderer.h"
 #include "gpu/ShaderCache.h"
 #include "gpu/Texture.h"
+#include "core/Stroke.h"
 
 #include <algorithm>
 #include <array>
@@ -314,6 +315,103 @@ TEST_CASE("Renderer: points respect a clip mask")
         CAPTURE(x);
         CHECK(out(x, 1, 0) == (x < 4 ? 255 : 0));
     }
+}
+
+TEST_CASE("Renderer: a hard dab covers its disc, a soft one fades out")
+{
+    gpu::Renderer renderer(SEETHING_SHADER_DIR);
+    gpu::Texture cov(40, 40, PixelFormat::R32F);
+    gpu::Framebuffer fbo(cov);
+    renderer.clear(fbo);
+    const core::Vec2f centre[] = {{20, 20}};
+    renderer.drawDabs(fbo, centre, 20.0f, 1.0f, 1.0f);
+    Image<float> out = cov.downloadFloat();
+    double area = 0;
+    for (std::size_t i = 0; i < out.size(); ++i)
+        area += out.data()[i];
+    // A radius 10 disc, antialiased rim included
+    CHECK(area == doctest::Approx(3.14159 * 100).epsilon(0.02));
+    CHECK(out(20, 20) == doctest::Approx(1.0f));
+    CHECK(out(20, 31) == 0.0f);
+    CHECK(out(15, 20) == doctest::Approx(out(24, 20))); // symmetric about x = 20
+
+    renderer.clear(fbo);
+    renderer.drawDabs(fbo, centre, 20.0f, 0.0f, 1.0f);
+    out = cov.downloadFloat();
+    CHECK(out(20, 20) > 0.95f);
+    CHECK(out(20, 24) < out(20, 22));
+    CHECK(out(20, 28) < 0.15f);
+}
+
+TEST_CASE("Renderer: flow builds up over repeated dabs and never passes 1")
+{
+    gpu::Renderer renderer(SEETHING_SHADER_DIR);
+    gpu::Texture cov(8, 8, PixelFormat::R32F);
+    gpu::Framebuffer fbo(cov);
+    renderer.clear(fbo);
+    const core::Vec2f centre[] = {{4, 4}};
+    renderer.drawDabs(fbo, centre, 6.0f, 1.0f, 0.5f);
+    CHECK(cov.downloadFloat()(3, 3) == doctest::Approx(0.5f));
+    renderer.drawDabs(fbo, centre, 6.0f, 1.0f, 0.5f);
+    CHECK(cov.downloadFloat()(3, 3) == doctest::Approx(0.75f)); // 0.5 + 0.5 * (1 - 0.5)
+    for (int i = 0; i < 30; ++i)
+        renderer.drawDabs(fbo, centre, 6.0f, 1.0f, 0.5f);
+    const float many = cov.downloadFloat()(3, 3);
+    CHECK(many <= 1.0f);
+    CHECK(many > 0.999f);
+    // Low flow still adds up in float
+    renderer.clear(fbo);
+    for (int i = 0; i < 100; ++i)
+        renderer.drawDabs(fbo, centre, 6.0f, 1.0f, 0.01f);
+    CHECK(cov.downloadFloat()(3, 3) == doctest::Approx(1.0 - std::pow(0.99, 100)).epsilon(0.01));
+}
+
+TEST_CASE("Renderer: applyStroke paints over and erases with destination-out")
+{
+    gpu::Renderer renderer(SEETHING_SHADER_DIR);
+    Image<std::uint8_t> layerPx(2, 1, 4);
+    for (int k = 0; k < 4; ++k)
+    {
+        layerPx(0, 0, k) = k == 3 ? 255 : 0;   // opaque black
+        layerPx(1, 0, k) = k == 3 ? 0 : 0;     // transparent
+    }
+    gpu::Texture layer = gpu::Texture::fromImage<std::uint8_t>(layerPx);
+    Image<float> full(2, 1, 1);
+    full.fill(1.0f);
+    gpu::Texture cov = gpu::Texture::fromImage<float>(full);
+    gpu::Texture dst = blankRGBA(2, 1);
+    gpu::Framebuffer fbo(dst);
+
+    renderer.applyStroke(layer, cov, nullptr, {1, 0, 0}, 0.5f, false, fbo);
+    Image<std::uint8_t> out = dst.download8();
+    CHECK(out(0, 0, 0) == doctest::Approx(128).epsilon(0.02)); // half red over black
+    CHECK(out(0, 0, 3) == 255);
+    CHECK(out(1, 0, 0) == 255);                                // red over nothing keeps its colour
+    CHECK(out(1, 0, 3) == doctest::Approx(128).epsilon(0.02)); // at half alpha
+
+    renderer.applyStroke(layer, cov, nullptr, {1, 0, 0}, 0.5f, true, fbo);
+    out = dst.download8();
+    CHECK(out(0, 0, 0) == 0);
+    CHECK(out(0, 0, 3) == doctest::Approx(128).epsilon(0.02));
+}
+
+TEST_CASE("Brush: a fast stroke has no gaps")
+{
+    gpu::Renderer renderer(SEETHING_SHADER_DIR);
+    gpu::Texture cov(120, 40, PixelFormat::R32F);
+    gpu::Framebuffer fbo(cov);
+    renderer.clear(fbo);
+    // Two pointer samples 100 pixels apart, as a fast drag gives in one frame
+    core::DabSpacer spacer;
+    std::vector<core::Vec2f> dabs;
+    spacer.begin({10, 20}, dabs);
+    spacer.moveTo({110, 20}, 6.0f * 0.25f, dabs);
+    renderer.drawDabs(fbo, dabs, 6.0f, 0.8f, 1.0f);
+    const Image<float> out = cov.downloadFloat();
+    float weakest = 1.0f;
+    for (int x = 10; x < 110; ++x)
+        weakest = std::min(weakest, out(x, 19));
+    CHECK(weakest > 0.99f);
 }
 
 TEST_CASE("Program: a compile error gives an empty program and the info log")

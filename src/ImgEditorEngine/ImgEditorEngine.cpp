@@ -26,6 +26,10 @@ void OpenGLEngine::clear()
         m_renderer.retire(std::move(m_scratch_fbo[i]));
         m_renderer.retire(std::move(m_scratch[i]));
     }
+    m_renderer.retire(std::move(m_coverage_fbo));
+    m_renderer.retire(std::move(m_coverage));
+    m_renderer.retire(std::move(m_applied_fbo));
+    m_renderer.retire(std::move(m_applied));
     m_stroke.reset();
     m_serial = 0;
     m_stale = true;
@@ -42,6 +46,11 @@ void OpenGLEngine::resize(int width, int height)
         m_scratch[i] = gpu::Texture(width, height, core::PixelFormat::RGBA8);
         m_scratch_fbo[i] = gpu::Framebuffer(m_scratch[i]);
     }
+    // Float: low-flow dabs add tiny amounts that 8 bits would round away
+    m_coverage = gpu::Texture(width, height, core::PixelFormat::R32F);
+    m_coverage_fbo = gpu::Framebuffer(m_coverage);
+    m_applied = gpu::Texture(width, height, core::PixelFormat::RGBA8);
+    m_applied_fbo = gpu::Framebuffer(m_applied);
 }
 
 void OpenGLEngine::sync(doc::Document &doc)
@@ -120,7 +129,14 @@ void OpenGLEngine::composite(const doc::Document &doc)
         const doc::LayerProps &p = visible[i]->props();
         const bool last = i + 1 == visible.size();
         const gpu::Framebuffer &dst = last ? m_composite_fbo : m_scratch_fbo[1 - backdrop];
-        m_renderer.composite(m_scratch[backdrop], m_layers.at(visible[i]->id()).tex, p.opacity, p.blend, dst);
+        const gpu::Texture *source = &m_layers.at(visible[i]->id()).tex;
+        // A brush stroke in progress shows on its layer before it is committed
+        if (m_stroke && m_stroke->stamp && m_stroke->layer == visible[i]->id())
+        {
+            applyStamp(*m_stroke, *source);
+            source = &m_applied;
+        }
+        m_renderer.composite(m_scratch[backdrop], *source, p.opacity, p.blend, dst);
         backdrop = 1 - backdrop;
     }
 }
@@ -139,7 +155,34 @@ bool OpenGLEngine::saveComposite(const std::string &path, std::string *error) co
 void OpenGLEngine::beginStroke(doc::Document &doc, doc::LayerId layer)
 {
     sync(doc);
-    m_stroke = Stroke{layer, {}};
+    m_stroke = Stroke{layer, {}, std::nullopt, doc.hasSelection()};
+}
+
+void OpenGLEngine::beginStamp(doc::Document &doc, doc::LayerId layer, StampStyle style)
+{
+    sync(doc);
+    if (m_coverage.empty())
+        return;
+    m_renderer.clear(m_coverage_fbo);
+    m_stroke = Stroke{layer, {}, style, doc.hasSelection()};
+}
+
+void OpenGLEngine::stampDabs(std::span<const core::Vec2f> centers, float diameter, float hardness, float flow)
+{
+    if (!m_stroke || !m_stroke->stamp || centers.empty())
+        return;
+    m_renderer.drawDabs(m_coverage_fbo, centers, diameter, hardness, flow);
+    const int reach = int(std::ceil(diameter * 0.5f)) + 2;
+    for (core::Vec2f c : centers)
+        m_stroke->rect = core::unite(m_stroke->rect, {int(std::floor(c.x)) - reach, int(std::floor(c.y)) - reach, 2 * reach + 1, 2 * reach + 1});
+    m_stroke->rect = core::intersect(m_stroke->rect, {0, 0, m_coverage.width(), m_coverage.height()});
+    m_stale = true;
+}
+
+void OpenGLEngine::applyStamp(const Stroke &stroke, const gpu::Texture &layer)
+{
+    const StampStyle &st = *stroke.stamp;
+    m_renderer.applyStroke(layer, m_coverage, stroke.clip ? &m_selection : nullptr, st.color, st.opacity, st.erase, m_applied_fbo);
 }
 
 void OpenGLEngine::strokePoints(const doc::Document &doc, std::span<const core::Vec2f> pixels, core::Vec3f color, float size)
@@ -148,6 +191,8 @@ void OpenGLEngine::strokePoints(const doc::Document &doc, std::span<const core::
         return;
     auto it = m_layers.find(m_stroke->layer);
     if (it == m_layers.end())
+        return;
+    if (m_stroke->stamp)
         return;
     m_renderer.drawPoints(it->second.fbo, pixels, color, size, doc.hasSelection() ? &m_selection : nullptr);
     // Each square spans pixel + 0.5 +- size / 2
@@ -167,9 +212,15 @@ std::optional<OpenGLEngine::StrokeResult> OpenGLEngine::endStroke()
         return std::nullopt;
     const Stroke stroke = *m_stroke;
     m_stroke.reset();
+    m_stale = true;
     auto it = m_layers.find(stroke.layer);
     if (it == m_layers.end() || stroke.rect.empty())
         return std::nullopt;
+    if (stroke.stamp)
+    {
+        applyStamp(stroke, it->second.tex);
+        return StrokeResult{stroke.layer, stroke.rect, m_applied.download8(stroke.rect)};
+    }
     return StrokeResult{stroke.layer, stroke.rect, it->second.tex.download8(stroke.rect)};
 }
 

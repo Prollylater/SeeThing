@@ -31,6 +31,8 @@ namespace ui
         core::Vec2f pos;
         float zoom = 1.0f;
         bool shift = false, alt = false;
+        // 1 until a platform with pen input feeds it (SDL3, P8)
+        float pressure = 1.0f;
     };
 
     // A canvas tool: a left-button gesture press, drag..., release, plus options and screen-space feedback.

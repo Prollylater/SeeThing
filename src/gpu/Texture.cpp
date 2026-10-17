@@ -127,6 +127,19 @@ namespace gpu
         return image;
     }
 
+    core::Image<float> Texture::downloadFloat() const
+    {
+        if (empty())
+            return {};
+        const FormatInfo info = formatInfo(m_format);
+        if (info.type != GL_FLOAT)
+            throw std::logic_error("gpu::Texture::downloadFloat on a non-float texture");
+        core::Image<float> image(m_w, m_h, info.channels, core::ColorSpace::Linear);
+        PixelStore store(GL_PACK_ALIGNMENT, GL_PACK_ROW_LENGTH, 0);
+        glGetTextureImage(m_tex.get(), 0, info.format, info.type, GLsizei(image.size() * sizeof(float)), image.data());
+        return image;
+    }
+
     core::Image<std::uint8_t> Texture::download8(core::Recti rect) const
     {
         if (empty() || rect.empty())

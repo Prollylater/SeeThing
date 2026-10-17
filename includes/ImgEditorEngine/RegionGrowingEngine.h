@@ -16,14 +16,15 @@ private:
     std::vector<Region> regions;
 
 public:
-    Mat<uint8_t> dispatch(const SlicParameter &exec_param, const Mat<uint8_t> &image, int coloration)
+    // roi: nullptr for the whole image, else pixels under 128 are left out (and black in the output)
+    Mat<uint8_t> dispatch(const SlicParameter &exec_param, const Mat<uint8_t> &image, int coloration, const Mat<uint8_t> *roi = nullptr)
     {
 
-        SlicAlgorithm(regions, image, exec_param);
+        SlicAlgorithm(regions, image, exec_param, roi);
         return output(coloration, image);
     }
 
-    Mat<uint8_t> dispatch(const SeedRGParameter &exec_param, const Mat<uint8_t> &image, int coloration)
+    Mat<uint8_t> dispatch(const SeedRGParameter &exec_param, const Mat<uint8_t> &image, int coloration, const Mat<uint8_t> *roi = nullptr)
     {
 
         std::queue<std::shared_ptr<Pixl>> seedlist;
@@ -34,17 +35,17 @@ public:
 
             if (exec_param.m_divide)
             {
-                seedlist = putGermsDivide(image, regions, exec_param.m_seednb);
+                seedlist = putGermsDivide(image, regions, exec_param.m_seednb, roi);
             }
             else
             {
 
-                seedlist = putGerms(image, regions, exec_param.m_seednb);
+                seedlist = putGerms(image, regions, exec_param.m_seednb, roi);
             }
         }
         else
         {
-            seedlist = putGermsAt(image, regions, exec_param.m_points);
+            seedlist = putGermsAt(image, regions, exec_param.m_points, roi);
         }
         std::cout << "RegionALg" << std::endl;
 
@@ -52,11 +53,11 @@ public:
 
         if (!exec_param.m_rg_type)
         {
-            regionGrowing3c(image, seedlist, exec_param.m_threshold, visited, regions, exec_param.m_comp_algorithm);
+            regionGrowing3c(image, seedlist, exec_param.m_threshold, visited, regions, exec_param.m_comp_algorithm, roi);
         }
         else
         {
-            adaptiveRegionGrowing(image, seedlist, exec_param.m_threshold, visited, regions, exec_param.m_adaptation);
+            adaptiveRegionGrowing(image, seedlist, exec_param.m_threshold, visited, regions, exec_param.m_adaptation, roi);
         }
 
         std::cout << "Fusing" << std::endl;

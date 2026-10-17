@@ -26,10 +26,50 @@ std::shared_ptr<Pixl> putGerm(const Mat<T> &img, int x, int y, std::vector<Regio
     return pix;
 }
 
+// Region of interest: nullptr is the whole image, otherwise pixels under 128 are left out
+inline bool inRoi(const Mat<uint8_t> *roi, int x, int y)
+{
+    return !roi || roi->atChannel(y, x, 0) >= 128;
+}
+
+inline int roiArea(const Mat<uint8_t> *roi, int rows, int cols)
+{
+    if (!roi)
+        return rows * cols;
+    int n = 0;
+    for (int y = 0; y < rows; ++y)
+        for (int x = 0; x < cols; ++x)
+            n += inRoi(roi, x, y);
+    return n;
+}
+
+// Drops the seeds outside the ROI and renumbers the rest, one fresh region each
+template <typename T>
+std::queue<std::shared_ptr<Pixl>> keepSeedsInRoi(std::queue<std::shared_ptr<Pixl>> seeds, std::vector<Region> &regions,
+                                                 const Mat<T> &img, const Mat<uint8_t> *roi)
+{
+    if (!roi)
+        return seeds;
+    std::vector<std::pair<int, int>> kept;
+    for (; !seeds.empty(); seeds.pop())
+        if (inRoi(roi, seeds.front()->x, seeds.front()->y))
+            kept.push_back({seeds.front()->x, seeds.front()->y});
+    regions.clear();
+    regions.resize(kept.size());
+    std::queue<std::shared_ptr<Pixl>> out;
+    for (std::size_t i = 0; i < kept.size(); ++i)
+    {
+        std::shared_ptr<Pixl> pix(new Pixl(kept[i].first, kept[i].second, int(i)));
+        out.push(pix);
+        regions[i].addGerm(pix, img);
+    }
+    return out;
+}
+
 // Pose des germes aléatoire
 // TODO Also, put a guard in the app
 template <typename T>
-std::queue<std::shared_ptr<Pixl>> putGerms(const Mat<T> &img, std::vector<Region> &regions, int germsquant)
+std::queue<std::shared_ptr<Pixl>> putGerms(const Mat<T> &img, std::vector<Region> &regions, int germsquant, const Mat<uint8_t> *roi = nullptr)
 {
     regions.clear();
     regions.shrink_to_fit();
@@ -55,22 +95,29 @@ std::queue<std::shared_ptr<Pixl>> putGerms(const Mat<T> &img, std::vector<Region
     {
         int x = dist_cols(generator); // generate a random number for x
         int y = dist_rows(generator);
+        // Draw again outside the ROI; a few tries, so an almost empty ROI can't hang
+        for (int tries = 0; !inRoi(roi, x, y) && tries < 1000; ++tries)
+        {
+            x = dist_cols(generator);
+            y = dist_rows(generator);
+        }
         std::shared_ptr<Pixl> pix(new Pixl(x, y, i));
 
         seedlist.push(pix);
         regions[i].addGerm(pix, img);
     }
 
-    return seedlist;
+    return keepSeedsInRoi(seedlist, regions, img, roi);
 }
 
-// One region per given position (x, y); positions outside the image are skipped
+// One region per given position (x, y); positions outside the image or the ROI are skipped
 template <typename T>
-std::queue<std::shared_ptr<Pixl>> putGermsAt(const Mat<T> &img, std::vector<Region> &regions, const std::vector<std::pair<int, int>> &points)
+std::queue<std::shared_ptr<Pixl>> putGermsAt(const Mat<T> &img, std::vector<Region> &regions, const std::vector<std::pair<int, int>> &points,
+                                             const Mat<uint8_t> *roi = nullptr)
 {
     std::vector<std::pair<int, int>> inside;
     for (const auto &[x, y] : points)
-        if (x >= 0 && y >= 0 && x < img.getCols() && y < img.getRows())
+        if (x >= 0 && y >= 0 && x < img.getCols() && y < img.getRows() && inRoi(roi, x, y))
             inside.push_back({x, y});
     regions.clear();
     regions.resize(inside.size());
@@ -86,7 +133,7 @@ std::queue<std::shared_ptr<Pixl>> putGermsAt(const Mat<T> &img, std::vector<Regi
 
 // Pose des germes aléatoire après division de l'image
 template <typename T>
-std::queue<std::shared_ptr<Pixl>> putGermsDivide(const Mat<T> &img, std::vector<Region> &regions, int n)
+std::queue<std::shared_ptr<Pixl>> putGermsDivide(const Mat<T> &img, std::vector<Region> &regions, int n, const Mat<uint8_t> *roi = nullptr)
 {
     regions.clear();
     regions.shrink_to_fit();
@@ -145,7 +192,8 @@ std::queue<std::shared_ptr<Pixl>> putGermsDivide(const Mat<T> &img, std::vector<
         }
     }
 
-    return seedlist;
+    // Cells whose seed fell outside the ROI get none
+    return keepSeedsInRoi(seedlist, regions, img, roi);
 }
 
 template <typename T>
@@ -244,7 +292,8 @@ static rgsCompFuncVar rgs_comp_func_var[RG_FUNCT_NB] = {
 // Execute eRegionGrowing algorithm with 1c SImilarity function
 template <typename T>
 void regionGrowing1c(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>> &pixelQueue,
-                     const float threshold, Mat<uint32_t> &visited, std::vector<Region> &regions, int compfunc = 0)
+                     const float threshold, Mat<uint32_t> &visited, std::vector<Region> &regions, int compfunc = 0,
+                     const Mat<uint8_t> *roi = nullptr)
 {
     visited.setTo(std::numeric_limits<uint32_t>::max());
     uint32_t valctrl = std::numeric_limits<uint32_t>::max();
@@ -275,6 +324,8 @@ void regionGrowing1c(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>> &pix
             for (int j = startY; j <= endY; ++j)
             {
                 // First visit of a pixel
+                if (!inRoi(roi, i, j))
+                    continue;
                 if ((visited.atChannel(j, i, 0)) == valctrl)
                 {
                     std::shared_ptr<Pixl> neighbor(new Pixl(i, j, currPixel->getId()));
@@ -318,7 +369,8 @@ void regionGrowing1c(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>> &pix
 // Execute eRegionGrowing algorithm with 3c SImilarity function
 template <typename T>
 void regionGrowing3c(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>> &pixelQueue,
-                     const float threshold, Mat<uint32_t> &visited, std::vector<Region> &regions, int compfunc = 0)
+                     const float threshold, Mat<uint32_t> &visited, std::vector<Region> &regions, int compfunc = 0,
+                     const Mat<uint8_t> *roi = nullptr)
 {
     visited.setTo(std::numeric_limits<uint32_t>::max());
     uint32_t valctrl = std::numeric_limits<uint32_t>::max();
@@ -351,6 +403,8 @@ void regionGrowing3c(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>> &pix
             {
 
                 // First visit of a pixel
+                if (!inRoi(roi, i, j))
+                    continue;
                 if ((visited.atChannel(j, i, 0)) == valctrl)
                 {
 
@@ -454,7 +508,8 @@ bool similarityFunction(const Mat<T> &image, std::shared_ptr<Pixl> currentPixel,
 // TODO, add proper mangament of the functions
 template <typename T>
 void adaptiveRegionGrowing(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>> &pixelQueue,
-                           const float threshold, Mat<unsigned int> &visited, std::vector<Region> &regions, int adaptative)
+                           const float threshold, Mat<unsigned int> &visited, std::vector<Region> &regions, int adaptative,
+                           const Mat<uint8_t> *roi = nullptr)
 {
 
     visited.setTo(std::numeric_limits<uint32_t>::max());
@@ -490,6 +545,8 @@ void adaptiveRegionGrowing(const Mat<T> &image, std::queue<std::shared_ptr<Pixl>
             for (int j = startY; j <= endY; ++j)
             {
                 // First visit of a pixel
+                if (!inRoi(roi, i, j))
+                    continue;
                 if ((visited.atChannel(j, i, 0)) == valctrl)
                 {
                     std::shared_ptr<Pixl> neighbor(new Pixl(i, j, currPixel->getId()));
@@ -543,7 +600,7 @@ void pipelineTest(std::string datapath)
 //  Pose des germes de façon régulière
 //  K nombre de Superpixels
 template <typename T>
-std::vector<std::shared_ptr<Pixl>> selectSuperpixelCenter(const Mat<T> &img, std::vector<Region> &regions, int K)
+std::vector<std::shared_ptr<Pixl>> selectSuperpixelCenter(const Mat<T> &img, std::vector<Region> &regions, int K, const Mat<uint8_t> *roi = nullptr)
 {
     // Assuming we are in presence of a BGR image
     // Get a number of germ through the commandline
@@ -552,7 +609,8 @@ std::vector<std::shared_ptr<Pixl>> selectSuperpixelCenter(const Mat<T> &img, std
 
     // Approximation of the size of a superpixel
 
-    int S = std::sqrt(img.getRows() * img.getCols() / K);
+    // K superpixels over the ROI, not the whole image
+    int S = std::max(1, int(std::sqrt(roiArea(roi, img.getRows(), img.getCols()) / K)));
     // Push the first grid
 
     int height = img.getRows();
@@ -566,8 +624,8 @@ std::vector<std::shared_ptr<Pixl>> selectSuperpixelCenter(const Mat<T> &img, std
     {
         for (int y = S / 2; y < height; y += S)
         {
-            // X y in the pixel
-            // TODO temp solution
+            if (!inRoi(roi, x, y))
+                continue;
             std::shared_ptr<Pixl> pix(new Pixl(x, y, index));
             regions.push_back(Region());
             superpixellist.push_back(pix);
@@ -666,7 +724,8 @@ inline double calcdistance5d(int x, int y, int i, int j, Mat<T> &image, const Sl
 
 // Move cluster centers to the lowest gradient position in a3 × 3 neighborhood.
 template <typename T>
-void moveCenterGradBased(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> supapixllist, const LabParam &param)
+void moveCenterGradBased(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> supapixllist, const LabParam &param,
+                         const Mat<uint8_t> *roi = nullptr)
 
 {
 
@@ -704,6 +763,8 @@ void moveCenterGradBased(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>>
             for (int j = startY; j <= endY; ++j)
             {
 
+                if (!inRoi(roi, i, j))
+                    continue;
                 float currentgradient = calcGradientSobel(i, j, imgLABspace);
                 // float currentgradient = getGradient(i, j);
                 if (mingradient > currentgradient)
@@ -791,12 +852,13 @@ struct slicMapPair
 // TODO Enforce spatial connectivity
 // Replace std::map and pair ?
 template <typename T>
-void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> &supapixllist, std::vector<Region> &regions, const SlicParameter &param)
+void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> &supapixllist, std::vector<Region> &regions, const SlicParameter &param,
+                        const Mat<uint8_t> *roi = nullptr)
 {
     // a* and b* are negative: Lab must be stored as float
     Mat<float> imgLABspace = image.template convertDt<float>();
     imgLABspace.toLabSpace(param.m_labparam);
-    int imgsize = image.getRows() * image.getCols();
+    int imgsize = roiArea(roi, image.getRows(), image.getCols());
 
     // typedef std::map<std::pair<int, int>, std::pair<int, int>> ClustersMap;
     // THe two method, unorderede map and map seem roughly equal
@@ -841,6 +903,8 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
             {
                 for (int j = startY; j <= endY; ++j)
                 {
+                    if (!inRoi(roi, i, j))
+                        continue;
                     // Recompute the distance from current pixel and ck's cluster
 
                     float currentdis = calcdistance5d(centerPixel->x, centerPixel->y, i, j, imgLABspace, param, S);
@@ -924,19 +988,20 @@ void SLICAssignmentStep(const Mat<T> &image, std::vector<std::shared_ptr<Pixl>> 
 }
 
 template <typename T>
-void SlicAlgorithm(/*const char* datapath*/ std::vector<Region> &regions, const Mat<T> &image, const SlicParameter &param)
+void SlicAlgorithm(/*const char* datapath*/ std::vector<Region> &regions, const Mat<T> &image, const SlicParameter &param,
+                  const Mat<uint8_t> *roi = nullptr)
 {
     // Clean the regions variable
     regions.clear();
 
-    std::vector<std::shared_ptr<Pixl>> superPixelCenter = selectSuperpixelCenter(image, regions, param.m_K);
+    std::vector<std::shared_ptr<Pixl>> superPixelCenter = selectSuperpixelCenter(image, regions, param.m_K, roi);
 
     std::chrono::milliseconds durationa;
 
     auto start = std::chrono::high_resolution_clock::now();
-    moveCenterGradBased(image, superPixelCenter, param.m_labparam);
+    moveCenterGradBased(image, superPixelCenter, param.m_labparam, roi);
 
-    SLICAssignmentStep(image, superPixelCenter, regions, param);
+    SLICAssignmentStep(image, superPixelCenter, regions, param, roi);
     auto stop = std::chrono::high_resolution_clock::now();
     durationa = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
     std::cout << "Duration of the entire operation was :" << durationa.count();

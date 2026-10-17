@@ -13,6 +13,8 @@ namespace ui
 {
     std::unique_ptr<Tool> makeHandTool();
     std::unique_ptr<Tool> makePencilTool();
+    std::unique_ptr<Tool> makeBrushTool();
+    std::unique_ptr<Tool> makeEraserTool();
     std::unique_ptr<Tool> makePickerTool();
     std::unique_ptr<Tool> makeBucketTool();
 
@@ -268,6 +270,8 @@ namespace ui
     {
         std::vector<std::unique_ptr<Tool>> tools;
         tools.push_back(makeHandTool());
+        tools.push_back(makeBrushTool());
+        tools.push_back(makeEraserTool());
         tools.push_back(makePencilTool());
         tools.push_back(makePickerTool());
         tools.push_back(makeBucketTool());

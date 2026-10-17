@@ -3,6 +3,7 @@
 
 #include "IconsCodicons.h"
 #include "app/App.h"
+#include "core/Stroke.h"
 
 #include <algorithm>
 #include <cmath>
@@ -42,7 +43,7 @@ namespace ui
         bool leftDragPans() const override { return true; }
     };
 
-    // Squares between two frames' positions, so a fast drag leaves no gaps. The stamp brush replaces it.
+    // Hard squares between two frames' positions, so a fast drag leaves no gaps. Pixel-exact, unlike the brush.
     class PencilTool : public Tool
     {
     public:
@@ -118,6 +119,95 @@ namespace ui
         core::Vec2f m_last;
     };
 
+    // Brush and eraser: soft round dabs at an even spacing, built up in a stroke texture and committed on release
+    class StampTool : public Tool
+    {
+    public:
+        explicit StampTool(bool erase) : m_erase(erase) {}
+
+        const char *name() const override { return m_erase ? "Eraser" : "Brush"; }
+        const char *icon() const override { return m_erase ? ICON_CI_CLEAR_ALL : ICON_CI_CIRCLE_FILLED; }
+        const char *help() const override
+        {
+            return m_erase ? "Eraser (E): soft round strokes that remove alpha from the active layer"
+                           : "Brush (B): soft round strokes on the active layer";
+        }
+        ImGuiKey key() const override { return m_erase ? ImGuiKey_E : ImGuiKey_B; }
+
+        void options(ToolContext &ctx) override
+        {
+            if (!m_erase)
+            {
+                colorOption(ctx.shared);
+                ImGui::SameLine();
+            }
+            slider("Size", &m_size, 1.0f, 500.0f, "%.0f px", ImGuiSliderFlags_Logarithmic, "Diameter of a dab");
+            slider("Hardness", &m_hardness, 0.0f, 1.0f, "%.2f", 0, "0: soft edge from the centre out. 1: a hard edge with one antialiased pixel");
+            slider("Opacity", &m_opacity, 0.0f, 1.0f, "%.2f", 0, "The most the whole stroke can cover, however often it overlaps itself");
+            slider("Flow", &m_flow, 0.01f, 1.0f, "%.2f", 0, "How much each dab adds: low flow builds up where you go over the same spot");
+            slider("Spacing", &m_spacing, 0.02f, 1.0f, "%.2f", 0, "Distance between dabs, as a share of the diameter");
+            slider("Smoothing", &m_smoothing, 0.0f, 0.9f, "%.2f", 0, "Trails the pointer to iron out hand shake");
+        }
+
+        void press(ToolContext &ctx, const ToolEvent &e) override
+        {
+            const ImVec4 &c = ctx.shared.color;
+            m_active = ctx.app.beginStamp({{c.x, c.y, c.z}, m_opacity, m_erase});
+            if (!m_active)
+                return;
+            m_pos = e.pos;
+            std::vector<core::Vec2f> dabs;
+            m_spacer.begin(m_pos, dabs);
+            m_diameter = m_size * e.pressure;
+            ctx.app.stampDabs(dabs, m_diameter, m_hardness, m_flow);
+        }
+
+        void drag(ToolContext &ctx, const ToolEvent &e) override
+        {
+            if (!m_active)
+                return;
+            m_pos = core::smoothTowards(m_pos, e.pos, m_smoothing);
+            m_diameter = m_size * e.pressure;
+            std::vector<core::Vec2f> dabs;
+            m_spacer.moveTo(m_pos, m_diameter * m_spacing, dabs);
+            ctx.app.stampDabs(dabs, m_diameter, m_hardness, m_flow);
+        }
+
+        void release(ToolContext &ctx, const ToolEvent &) override { cancel(ctx); }
+        void cancel(ToolContext &ctx) override
+        {
+            if (m_active)
+                ctx.app.endStroke();
+            m_active = false;
+        }
+
+        void overlay(ImDrawList *dl, const CanvasView &view, const CanvasInput &canvas) const override
+        {
+            if (!canvas.hovered)
+                return;
+            const core::Vec2f c = view.toScreen(canvas.mouse, canvas.origin);
+            const float r = std::max(1.0f, m_size * 0.5f * view.zoom);
+            dl->AddCircle({c.x, c.y}, r + 1.0f, IM_COL32(0, 0, 0, 160), 0, 1.0f);
+            dl->AddCircle({c.x, c.y}, r, IM_COL32(255, 255, 255, 200), 0, 1.0f);
+        }
+
+    private:
+        static void slider(const char *label, float *v, float lo, float hi, const char *format, ImGuiSliderFlags flags, const char *tooltip)
+        {
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(90.0f);
+            ImGui::SliderFloat(label, v, lo, hi, format, flags | ImGuiSliderFlags_AlwaysClamp);
+            ImGui::SetItemTooltip("%s", tooltip);
+        }
+
+        bool m_erase;
+        float m_size = 24.0f, m_hardness = 0.5f, m_opacity = 1.0f, m_flow = 1.0f, m_spacing = 0.15f, m_smoothing = 0.0f;
+        bool m_active = false;
+        float m_diameter = 24.0f;
+        core::Vec2f m_pos;
+        core::DabSpacer m_spacer;
+    };
+
     class PickerTool : public Tool
     {
     public:
@@ -176,6 +266,8 @@ namespace ui
 
     std::unique_ptr<Tool> makeHandTool() { return std::make_unique<HandTool>(); }
     std::unique_ptr<Tool> makePencilTool() { return std::make_unique<PencilTool>(); }
+    std::unique_ptr<Tool> makeBrushTool() { return std::make_unique<StampTool>(false); }
+    std::unique_ptr<Tool> makeEraserTool() { return std::make_unique<StampTool>(true); }
     std::unique_ptr<Tool> makePickerTool() { return std::make_unique<PickerTool>(); }
     std::unique_ptr<Tool> makeBucketTool() { return std::make_unique<BucketTool>(); }
 }

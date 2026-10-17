@@ -39,10 +39,21 @@ public:
         core::Recti rect;
         core::Image<std::uint8_t> pixels;
     };
-    // Paints straight into the layer's texture until endStroke
+    // Pencil: paints straight into the layer's texture until endStroke
     void beginStroke(doc::Document &doc, doc::LayerId layer);
     // Pixel coordinates; clips to the selection when one exists
     void strokePoints(const doc::Document &doc, std::span<const core::Vec2f> pixels, core::Vec3f color, float size);
+
+    struct StampStyle
+    {
+        core::Vec3f color;
+        float opacity = 1.0f;
+        bool erase = false;
+    };
+    // Brush and eraser: dabs build up a coverage texture; the composite shows it applied to the layer,
+    // and endStroke applies it for real
+    void beginStamp(doc::Document &doc, doc::LayerId layer, StampStyle style);
+    void stampDabs(std::span<const core::Vec2f> centers, float diameter, float hardness, float flow);
     std::optional<StrokeResult> endStroke();
     bool stroking() const { return m_stroke.has_value(); }
 
@@ -74,13 +85,19 @@ private:
     
     gpu::Texture m_scratch[2];
     gpu::Framebuffer m_scratch_fbo[2];
+    // The stamp stroke's coverage (R32F), and its layer with the stroke applied
+    gpu::Texture m_coverage, m_applied;
+    gpu::Framebuffer m_coverage_fbo, m_applied_fbo;
     bool m_stale = true;
 
     struct Stroke
     {
         doc::LayerId layer;
         core::Recti rect;
+        std::optional<StampStyle> stamp;
+        bool clip = false;
     };
+    void applyStamp(const Stroke &stroke, const gpu::Texture &layer);
     std::optional<Stroke> m_stroke;
 
     gpu::Texture m_result_tex;

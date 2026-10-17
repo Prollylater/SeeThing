@@ -37,6 +37,12 @@ namespace gpu
         // With a clip mask (R8, the target's size) only pixels where it is at least one half change.
         void drawPoints(const Framebuffer &dst, std::span<const core::Vec2f> pixels, core::Vec3f color, float size,
                         const Texture *clip = nullptr);
+        // Round dabs into a stroke's coverage (R32F): diameter in pixels, centres in pixel coordinates
+        // ((0.5, 0.5) is the centre of the top-left pixel), hardness and flow from 0 to 1
+        void drawDabs(const Framebuffer &coverage, std::span<const core::Vec2f> centers, float diameter, float hardness, float flow);
+        // dst = the coverage applied to layer: paint with color, or erase; opacity caps it, clip (R8) limits it
+        void applyStroke(const Texture &layer, const Texture &coverage, const Texture *clip, core::Vec3f color, float opacity,
+                         bool erase, const Framebuffer &dst);
         // For an ImGui draw callback: draws into ImGui's framebuffer with its blending and scissor, and its VAO,
         // since VAOs are not shared with the other viewports' contexts. Reset ImGui's render state afterwards.
         void drawSelectionOverlay(const Texture &mask, const SelectionOverlay &where);

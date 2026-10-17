@@ -64,6 +64,7 @@ add_library(seething_doc STATIC
     ${SOURCE_DIR}/doc/Document.cpp
     ${SOURCE_DIR}/doc/Edits.cpp
     ${SOURCE_DIR}/doc/History.cpp
+    ${SOURCE_DIR}/doc/Selection.cpp
 )
 target_link_libraries(seething_doc PUBLIC seething_core PRIVATE seething_warnings)
 
@@ -92,7 +93,10 @@ set(PROJECT_SRC
     ${SOURCE_DIR}/ui/panels/LogPanel.cpp
     ${SOURCE_DIR}/ui/panels/ResultPanel.cpp
     ${SOURCE_DIR}/ui/panels/SegmentationPanel.cpp
+    ${SOURCE_DIR}/ui/tools/PaintTools.cpp
+    ${SOURCE_DIR}/ui/tools/SelectTools.cpp
     ${SOURCE_DIR}/ImgEditorEngine/ImgEditorEngine.cpp
+    ${SOURCE_DIR}/ImgEditorEngine/RegionFill.cpp
     ${SOURCE_DIR}/ImgEditorEngine/RegionGrowingAlg.cpp
     ${SOURCE_DIR}/ImgEditorEngine/Regions.cpp
     ${SOURCE_DIR}/Utils/AssetPath.cpp
@@ -138,8 +142,10 @@ if(SEETHING_BUILD_TESTS)
         tests/core/test_image.cpp
         tests/core/test_color.cpp
         tests/core/test_imageio.cpp
+        tests/core/test_stroke.cpp
         tests/ui/test_canvas_view.cpp
         tests/doc/test_document.cpp
+        tests/doc/test_selection.cpp
     )
     target_link_libraries(seething_tests PRIVATE seething_core seething_doc doctest::doctest seething_warnings)
     add_test(NAME core COMMAND seething_tests)

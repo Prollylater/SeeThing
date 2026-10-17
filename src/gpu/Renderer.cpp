@@ -10,7 +10,9 @@ namespace gpu
         if (!m_shaders.load("blit", dir + "fullscreen.vert", dir + "blit.frag") ||
             !m_shaders.load("composite", dir + "fullscreen.vert", dir + "composite.frag") ||
             !m_shaders.load("points", dir + "points.vert", dir + "solid.frag") ||
-            !m_shaders.load("selection", dir + "fullscreen.vert", dir + "selection.frag"))
+            !m_shaders.load("selection", dir + "fullscreen.vert", dir + "selection.frag") ||
+            !m_shaders.load("dab", dir + "dab.vert", dir + "dab.frag") ||
+            !m_shaders.load("stroke", dir + "fullscreen.vert", dir + "stroke.frag"))
             throw std::runtime_error("gpu::Renderer: " + m_shaders.lastError());
 
         // The fullscreen triangle comes from gl_VertexID; core profile still wants a VAO bound
@@ -80,6 +82,48 @@ namespace gpu
         glBindTextureUnit(1, source.id());
         glBindVertexArray(m_emptyVao.get());
         glDrawArrays(GL_TRIANGLES, 0, 3);
+        endPass();
+    }
+
+    void Renderer::drawDabs(const Framebuffer &coverage, std::span<const core::Vec2f> centers, float diameter, float hardness, float flow)
+    {
+        if (centers.empty())
+            return;
+        beginPass(coverage);
+        glNamedBufferData(m_pointsVbo.get(), GLsizeiptr(centers.size_bytes()), centers.data(), GL_STREAM_DRAW);
+        const Program &prog = m_shaders.get("dab");
+        prog.set("target_size", core::Vec2f{float(coverage.width()), float(coverage.height())});
+        prog.set("radius", diameter * 0.5f);
+        prog.set("hardness", hardness);
+        prog.set("flow", flow);
+        prog.use();
+        glEnable(GL_BLEND);
+        glBlendEquation(GL_FUNC_ADD);
+        glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+        glBindVertexArray(m_pointsVao.get());
+        glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, GLsizei(centers.size()));
+        glDisable(GL_BLEND);
+        endPass();
+    }
+
+    void Renderer::applyStroke(const Texture &layer, const Texture &coverage, const Texture *clip, core::Vec3f color, float opacity,
+                               bool erase, const Framebuffer &dst)
+    {
+        beginPass(dst);
+        const Program &prog = m_shaders.get("stroke");
+        prog.set("color", color);
+        prog.set("opacity", opacity);
+        prog.set("erase", erase ? 1 : 0);
+        prog.set("use_clip", clip ? 1 : 0);
+        prog.use();
+        glBindTextureUnit(0, layer.id());
+        glBindTextureUnit(1, coverage.id());
+        if (clip)
+            glBindTextureUnit(2, clip->id());
+        glBindVertexArray(m_emptyVao.get());
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        if (clip)
+            glBindTextureUnit(2, 0);
         endPass();
     }
 
