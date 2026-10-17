@@ -90,7 +90,11 @@ namespace ui
         if (!ImGui::GetIO().WantTextInput && !shell.dialogOpen())
             for (std::size_t i = 0; i < m_tools.size(); ++i)
                 if (ImGui::Shortcut(m_tools[i]->key(), ImGuiInputFlags_RouteGlobal))
+                {
+                    if (i == m_tool && !m_gesture)
+                        m_tools[i]->cycleVariant();
                     selectTool(app, i);
+                }
 
         for (std::size_t i = 0; i < m_tools.size(); ++i)
         {

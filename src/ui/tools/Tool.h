@@ -54,6 +54,8 @@ namespace ui
         virtual void cancel(ToolContext &) {}
         virtual void overlay(ImDrawList *, const CanvasView &, const CanvasInput &) const {}
         virtual bool leftDragPans() const { return false; }
+        // The tool's key pressed while it is already active: switch to its next variant, if it has some
+        virtual void cycleVariant() {}
     };
 }
 

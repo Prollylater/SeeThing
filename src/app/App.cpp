@@ -234,13 +234,14 @@ bool App::bucketFill(core::Vec2i p, float threshold, int compare, std::array<std
     return filled;
 }
 
-bool App::magicWand(core::Vec2i p, float threshold, int compare, doc::SelectMode mode)
+bool App::magicWand(core::Vec2i p, float threshold, int compare, doc::SelectMode mode, bool limitToSelection)
 {
     if (!m_doc.activeLayer() || p.x < 0 || p.y < 0 || p.x >= m_doc.width() || p.y >= m_doc.height())
         return false;
     endStroke();
     doc::Shape region;
-    const double ms = millisecondsOf([&] { region = growRegion(activePixels(), p, threshold, compare); });
+    const core::Image<std::uint8_t> *limit = limitToSelection && m_doc.hasSelection() ? &m_doc.selection() : nullptr;
+    const double ms = millisecondsOf([&] { region = growRegion(activePixels(), p, threshold, compare, limit); });
     const std::string label = mode == doc::SelectMode::Replace ? "Magic wand" : std::string("Magic wand (") + doc::selectModeName(mode) + ")";
     m_log.info("Magic wand at {}, {}: {} x {} box, {:.0f} ms", p.x, p.y, region.bounds.w, region.bounds.h, ms);
     return doc::applySelection(m_doc, region, mode, label);

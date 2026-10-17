@@ -329,7 +329,7 @@ namespace ui
                 {"Left drag", "Use the active tool"},
                 {"H, B, E, P", "Hand, brush, eraser, pencil"},
                 {"I, G", "Colour picker, bucket"},
-                {"M, O, L, W", "Rectangle, ellipse, lasso, magic wand"},
+                {"M, W", "Select (M again: rectangle, ellipse, lasso), magic wand"},
                 {"Shift / Alt / both", "Add to, subtract from, intersect the selection"},
                 {"S, Alt+click", "Seeds tool; remove a seed"},
                 {"Ctrl+0 / Ctrl+1", "Fit / actual size"},
