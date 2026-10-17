@@ -9,7 +9,6 @@ namespace ui
 {
     class Shell;
 
-    // The last algorithm result; shown only while there is one
     class ResultPanel
     {
     public:

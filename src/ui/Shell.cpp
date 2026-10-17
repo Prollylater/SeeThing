@@ -4,6 +4,7 @@
 #include "IconsCodicons.h"
 #include "app/App.h"
 #include "app/Platform.h"
+#include "doc/Edits.h"
 
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -99,6 +100,8 @@ namespace ui
         m_canvas.draw(m_app, *this, m_showImage);
         m_result.draw(m_app, *this);
         m_segmentation.draw(m_app, m_showSegmentation);
+        m_layers.draw(m_app, m_showLayers);
+        m_history.draw(m_app, m_showHistory);
         m_logPanel.draw(m_app.log(), m_showLog);
         drawControls();
         drawDialogs();
@@ -132,10 +135,14 @@ namespace ui
         ImGui::DockBuilderSetNodeSize(dockspace, ImGui::GetMainViewport()->WorkSize);
         ImGuiID center = dockspace;
         const ImGuiID right = ImGui::DockBuilderSplitNode(center, ImGuiDir_Right, 0.28f, nullptr, &center);
+        ImGuiID rightTop = right;
+        const ImGuiID rightBottom = ImGui::DockBuilderSplitNode(rightTop, ImGuiDir_Down, 0.45f, nullptr, &rightTop);
         const ImGuiID bottom = ImGui::DockBuilderSplitNode(center, ImGuiDir_Down, 0.22f, nullptr, &center);
         ImGui::DockBuilderDockWindow(CanvasPanel::name, center);
         ImGui::DockBuilderDockWindow(ResultPanel::name, center);
-        ImGui::DockBuilderDockWindow(SegmentationPanel::name, right);
+        ImGui::DockBuilderDockWindow(SegmentationPanel::name, rightTop);
+        ImGui::DockBuilderDockWindow(LayersPanel::name, rightBottom);
+        ImGui::DockBuilderDockWindow(HistoryPanel::name, rightBottom);
         ImGui::DockBuilderDockWindow(LogPanel::name, bottom);
         ImGui::DockBuilderFinish(dockspace);
     }
@@ -162,10 +169,30 @@ namespace ui
                 m_app.quit();
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("Edit"))
+        {
+            const doc::History *h = hasImage ? &m_app.document().history() : nullptr;
+            const std::string undo = h && h->canUndo() ? "Undo " + h->step(h->cursor() - 1).label() : "Undo";
+            const std::string redo = h && h->canRedo() ? "Redo " + h->step(h->cursor()).label() : "Redo";
+            if (ImGui::MenuItem(undo.c_str(), "Ctrl+Z", false, h && h->canUndo()))
+                m_app.undo();
+            if (ImGui::MenuItem(redo.c_str(), "Ctrl+Shift+Z", false, h && h->canRedo()))
+                m_app.redo();
+            ImGui::Separator();
+            if (ImGui::MenuItem("Select All", "Ctrl+A", false, hasImage))
+                doc::selectAll(m_app.document());
+            if (ImGui::MenuItem("Deselect", "Ctrl+D", false, hasImage && m_app.document().hasSelection()))
+                doc::selectNone(m_app.document());
+            if (ImGui::MenuItem("Invert Selection", "Ctrl+Shift+I", false, hasImage))
+                doc::invertSelection(m_app.document());
+            ImGui::EndMenu();
+        }
         if (ImGui::BeginMenu("View"))
         {
             ImGui::MenuItem(CanvasPanel::name, nullptr, &m_showImage);
             ImGui::MenuItem(SegmentationPanel::name, nullptr, &m_showSegmentation);
+            ImGui::MenuItem(LayersPanel::name, nullptr, &m_showLayers);
+            ImGui::MenuItem(HistoryPanel::name, nullptr, &m_showHistory);
             ImGui::MenuItem(LogPanel::name, nullptr, &m_showLog);
             ImGui::Separator();
             if (ImGui::MenuItem("Fit", "Ctrl+0", false, hasImage))
@@ -175,7 +202,7 @@ namespace ui
             ImGui::Separator();
             if (ImGui::MenuItem("Reset Layout"))
             {
-                m_showImage = m_showSegmentation = m_showLog = true;
+                m_showImage = m_showSegmentation = m_showLog = m_showLayers = m_showHistory = true;
                 m_resetLayout = true;
             }
             ImGui::EndMenu();
@@ -209,6 +236,18 @@ namespace ui
             m_canvas.view().request = CanvasView::Request::Fit;
         if (hasImage && ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_1, global))
             m_canvas.view().request = CanvasView::Request::ActualSize;
+        // A focused text field keeps its own undo and select all: these routes rank below it
+        if (hasImage && ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_Z, global | ImGuiInputFlags_Repeat))
+            m_app.undo();
+        if (hasImage && (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_Z, global | ImGuiInputFlags_Repeat) ||
+                         ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_Y, global | ImGuiInputFlags_Repeat)))
+            m_app.redo();
+        if (hasImage && ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_A, global))
+            doc::selectAll(m_app.document());
+        if (hasImage && ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_D, global))
+            doc::selectNone(m_app.document());
+        if (hasImage && ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_I, global))
+            doc::invertSelection(m_app.document());
     }
 
     void Shell::openImageDialog()
@@ -287,8 +326,16 @@ namespace ui
                 {"Mouse wheel", "Zoom around the cursor"},
                 {"Right or middle drag", "Pan"},
                 {"Space + left drag", "Pan"},
-                {"Left drag", "Paint, with the pencil on"},
+                {"Left drag", "Use the active tool"},
+                {"H, P, I, G", "Hand, pencil, colour picker, bucket"},
+                {"M, O, L, W", "Rectangle, ellipse, lasso, magic wand"},
+                {"Shift / Alt / both", "Add to, subtract from, intersect the selection"},
+                {"S, Alt+click", "Seeds tool; remove a seed"},
                 {"Ctrl+0 / Ctrl+1", "Fit / actual size"},
+                {"Ctrl+Z", "Undo"},
+                {"Ctrl+Shift+Z, Ctrl+Y", "Redo"},
+                {"Ctrl+A, Ctrl+D", "Select all, deselect"},
+                {"Ctrl+Shift+I", "Invert the selection"},
                 {"Ctrl+O, Ctrl+S", "Open, save"},
                 {"Ctrl+Shift+S", "Save as"},
                 {"Ctrl+W, Ctrl+Q", "Close image, quit"},

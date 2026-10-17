@@ -1,6 +1,7 @@
 #include "SegmentationPanel.h"
 
 #include "app/App.h"
+#include "ui/tools/Tool.h"
 
 #include "imgui.h"
 
@@ -8,7 +9,7 @@ namespace ui
 {
     namespace
     {
-        const char *colorations[] = {"Random colour per region", "Average colour of the region", "Mean intensity of the region"};
+        const char *const colorations[] = {"Random colour per region", "Average colour of the region", "Mean intensity of the region"};
 
         bool combo(const char *label, int &index, const char *const *items, int count)
         {
@@ -104,18 +105,16 @@ namespace ui
         Seeded &s = m_seeded;
         ImGui::TextWrapped("Seeds grow into regions while neighbours stay under the threshold; close regions are merged.");
         ImGui::Spacing();
-        ImGui::SliderInt("Seeds", &s.seeds, 1, 5000);
-        ImGui::BeginDisabled();
-        ImGui::Checkbox("Random seeds", &s.random);
-        ImGui::EndDisabled();
-        disabledTooltip("Placing seeds by hand comes with the seed tool (P6)");
-        ImGui::SameLine();
-        ImGui::Checkbox("One per grid cell", &s.divide);
-        ImGui::SetItemTooltip("Spreads the seeds on a grid instead of anywhere in the image");
+        const char *sources[] = {"Random", "One per grid cell", "Placed with the Seeds tool"};
+        combo("Seeds from", s.source, sources, IM_COUNTOF(sources));
+        ImGui::SetItemTooltip("Random: anywhere. Grid: spread evenly. Placed: the seeds on the image (Seeds tool, S)");
+        const bool placed = s.source == 2;
+        if (placed)
+            ImGui::Text("%zu seeds placed", app.document().seeds().size());
+        else
+            ImGui::SliderInt("Seeds", &s.seeds, 1, 5000);
 
-        // Same order as rgs_comp_func_var in RegionGrowingAlg.h
-        const char *compare[] = {"Seed colour", "Region colour", "Region luminance", "Distance to seed colour"};
-        combo("Compare with", s.compare, compare, IM_COUNTOF(compare));
+        combo("Compare with", s.compare, compareNames, IM_COUNTOF(compareNames));
         ImGui::SetItemTooltip("What a neighbour pixel is compared to before it joins a region");
         ImGui::SliderFloat("Threshold", &s.threshold, 0.0f, 50.0f, "%.1f");
         ImGui::SetItemTooltip("Largest difference that still joins the region; also the merge threshold");
@@ -130,7 +129,7 @@ namespace ui
         combo("Output", s.coloration, colorations, IM_COUNTOF(colorations));
         ImGui::Spacing();
         if (runButton(app))
-            app.runSeeded(SeedRGParameter(s.threshold, s.adaptPercent, s.seeds, s.compare, s.random, s.divide, s.adaptive), s.coloration);
+            app.runSeeded(SeedRGParameter(s.threshold, s.adaptPercent, s.seeds, s.compare, !placed, s.source == 1, s.adaptive), s.coloration);
         ImGui::SameLine();
         if (ImGui::Button("Defaults"))
             s = Seeded{};

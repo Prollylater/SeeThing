@@ -8,7 +8,9 @@ namespace gpu
     {
         const std::string dir = shaderDir.empty() || shaderDir.back() == '/' ? shaderDir : shaderDir + "/";
         if (!m_shaders.load("blit", dir + "fullscreen.vert", dir + "blit.frag") ||
-            !m_shaders.load("points", dir + "points.vert", dir + "solid.frag"))
+            !m_shaders.load("composite", dir + "fullscreen.vert", dir + "composite.frag") ||
+            !m_shaders.load("points", dir + "points.vert", dir + "solid.frag") ||
+            !m_shaders.load("selection", dir + "fullscreen.vert", dir + "selection.frag"))
             throw std::runtime_error("gpu::Renderer: " + m_shaders.lastError());
 
         // The fullscreen triangle comes from gl_VertexID; core profile still wants a VAO bound
@@ -48,6 +50,12 @@ namespace gpu
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
+    void Renderer::clear(const Framebuffer &dst, float r, float g, float b, float a)
+    {
+        const float color[] = {r, g, b, a};
+        glClearNamedFramebufferfv(dst.id(), GL_COLOR, 0, color);
+    }
+
     void Renderer::blit(const Texture &src, const Framebuffer &dst)
     {
         beginPass(dst);
@@ -61,7 +69,39 @@ namespace gpu
         endPass();
     }
 
-    void Renderer::drawPoints(const Framebuffer &dst, std::span<const core::Vec2f> pixels, core::Vec3f color, float size)
+    void Renderer::composite(const Texture &backdrop, const Texture &source, float opacity, core::BlendMode mode, const Framebuffer &dst)
+    {
+        beginPass(dst);
+        const Program &prog = m_shaders.get("composite");
+        prog.set("opacity", opacity);
+        prog.set("mode", int(mode));
+        prog.use();
+        glBindTextureUnit(0, backdrop.id());
+        glBindTextureUnit(1, source.id());
+        glBindVertexArray(m_emptyVao.get());
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        endPass();
+    }
+
+    void Renderer::drawSelectionOverlay(const Texture &mask, const SelectionOverlay &where)
+    {
+        GLint viewport[4] = {};
+        glGetIntegerv(GL_VIEWPORT, viewport);
+        const Program &prog = m_shaders.get("selection");
+        prog.set("viewport_pos", where.viewportPos);
+        prog.set("fb_scale", where.viewportSize.x > 0 ? float(viewport[2]) / where.viewportSize.x : 1.0f);
+        prog.set("fb_height", float(viewport[3]));
+        prog.set("image_origin", where.imageOrigin);
+        prog.set("zoom", where.zoom);
+        prog.set("time", where.time);
+        prog.use();
+        glBindTextureUnit(1, mask.id());
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glBindTextureUnit(1, 0);
+    }
+
+    void Renderer::drawPoints(const Framebuffer &dst, std::span<const core::Vec2f> pixels, core::Vec3f color, float size,
+                              const Texture *clip)
     {
         if (pixels.empty())
             return;
@@ -72,10 +112,15 @@ namespace gpu
         prog.set("target_size", core::Vec2f{float(dst.width()), float(dst.height())});
         prog.set("point_size", size);
         prog.set("color", color);
+        prog.set("use_clip", clip ? 1 : 0);
         prog.use();
+        if (clip)
+            glBindTextureUnit(1, clip->id());
         // One instanced square per point: GL_POINTS caps the size per driver
         glBindVertexArray(m_pointsVao.get());
         glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, GLsizei(pixels.size()));
+        if (clip)
+            glBindTextureUnit(1, 0);
         endPass();
     }
 

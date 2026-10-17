@@ -42,10 +42,9 @@ public:
                 seedlist = putGerms(image, regions, exec_param.m_seednb);
             }
         }
-        // TODO, implement user germs selection
         else
         {
-            std::cout << "User Selection is nott implemented" << std::endl;
+            seedlist = putGermsAt(image, regions, exec_param.m_points);
         }
         std::cout << "RegionALg" << std::endl;
 

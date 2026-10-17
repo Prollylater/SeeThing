@@ -29,8 +29,7 @@ namespace ui
         struct Seeded
         {
             int seeds = 100;
-            bool random = true;
-            bool divide = false;
+            int source = 0; // random, grid, placed
             int compare = 0;
             bool adaptive = false;
             float adaptPercent = 50.0f;

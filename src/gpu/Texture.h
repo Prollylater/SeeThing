@@ -2,6 +2,7 @@
 #define GPU_TEXTURE_H
 
 #include "GlHandle.h"
+#include "core/Geometry.h"
 #include "core/Image.h"
 
 #include <cstdint>
@@ -34,7 +35,10 @@ namespace gpu
         // Size and channel count must match the texture
         void upload(core::ImageView<const std::uint8_t> image);
         void upload(core::ImageView<const float> image);
+        // The image lands with its top-left pixel at x, y; it must fit inside
+        void upload(int x, int y, core::ImageView<const std::uint8_t> image);
         core::Image<std::uint8_t> download8() const;
+        core::Image<std::uint8_t> download8(core::Recti rect) const;
 
         GLuint id() const { return m_tex.get(); }
         int width() const { return m_w; }
@@ -44,7 +48,7 @@ namespace gpu
         bool empty() const { return !m_tex; }
 
     private:
-        void uploadRaw(const void *px, int w, int h, int c, std::ptrdiff_t stride, GLenum type);
+        void uploadRaw(int x, int y, const void *px, int w, int h, int c, std::ptrdiff_t stride, GLenum type);
 
         TextureHandle m_tex;
         int m_w = 0, m_h = 0;

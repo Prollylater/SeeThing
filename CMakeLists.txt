@@ -59,6 +59,15 @@ target_include_directories(seething_core SYSTEM PRIVATE ${INCLUDE_DIR}/3rdParty)
 target_link_libraries(seething_core PRIVATE seething_warnings)
 
 
+# Document: layers, selection, history. CPU only
+add_library(seething_doc STATIC
+    ${SOURCE_DIR}/doc/Document.cpp
+    ${SOURCE_DIR}/doc/Edits.cpp
+    ${SOURCE_DIR}/doc/History.cpp
+)
+target_link_libraries(seething_doc PUBLIC seething_core PRIVATE seething_warnings)
+
+
 add_library(seething_gpu STATIC
     ${SOURCE_DIR}/gpu/DebugOutput.cpp
     ${SOURCE_DIR}/gpu/Framebuffer.cpp
@@ -76,11 +85,13 @@ set(PROJECT_SRC
     ${SOURCE_DIR}/app/Platform.cpp
     ${SOURCE_DIR}/ui/Shell.cpp
     ${SOURCE_DIR}/ui/CanvasWidget.cpp
+    ${SOURCE_DIR}/ui/SelectionOverlay.cpp
     ${SOURCE_DIR}/ui/panels/CanvasPanel.cpp
+    ${SOURCE_DIR}/ui/panels/HistoryPanel.cpp
+    ${SOURCE_DIR}/ui/panels/LayersPanel.cpp
     ${SOURCE_DIR}/ui/panels/LogPanel.cpp
     ${SOURCE_DIR}/ui/panels/ResultPanel.cpp
     ${SOURCE_DIR}/ui/panels/SegmentationPanel.cpp
-    ${SOURCE_DIR}/Models/Canvas.cpp
     ${SOURCE_DIR}/ImgEditorEngine/ImgEditorEngine.cpp
     ${SOURCE_DIR}/ImgEditorEngine/RegionGrowingAlg.cpp
     ${SOURCE_DIR}/ImgEditorEngine/Regions.cpp
@@ -91,7 +102,6 @@ set(PROJECT_SRC
 
 set(INCLUDES_DIRS
     ${INCLUDE_DIR}
-    ${INCLUDE_DIR}/Models
     ${INCLUDE_DIR}/ImgEditorEngine
     ${INCLUDE_DIR}/Utils
 )
@@ -101,7 +111,7 @@ add_executable(seething ${PROJECT_SRC})
 target_compile_features(seething PRIVATE cxx_std_20)
 target_include_directories(seething PRIVATE ${INCLUDES_DIRS})
 target_include_directories(seething SYSTEM PRIVATE ${INCLUDE_DIR}/3rdParty)
-target_link_libraries(seething PRIVATE seething_core seething_gpu imgui glad glfw seething_warnings)
+target_link_libraries(seething PRIVATE seething_core seething_doc seething_gpu imgui glad glfw seething_warnings)
 
 if(OpenMP_CXX_FOUND)
     target_link_libraries(seething PRIVATE OpenMP::OpenMP_CXX)
@@ -129,8 +139,9 @@ if(SEETHING_BUILD_TESTS)
         tests/core/test_color.cpp
         tests/core/test_imageio.cpp
         tests/ui/test_canvas_view.cpp
+        tests/doc/test_document.cpp
     )
-    target_link_libraries(seething_tests PRIVATE seething_core doctest::doctest seething_warnings)
+    target_link_libraries(seething_tests PRIVATE seething_core seething_doc doctest::doctest seething_warnings)
     add_test(NAME core COMMAND seething_tests)
 
     # Headless GL 4.5 through EGL; skipped (exit 77) where no context can be made

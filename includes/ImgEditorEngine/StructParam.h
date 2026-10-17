@@ -1,5 +1,7 @@
 #ifndef ALG_PARAM
 #define ALG_PARAM
+#include <utility>
+#include <vector>
 
 /// @brief
 struct SlicParameter;
@@ -34,6 +36,8 @@ struct SeedRGParameter
     bool m_random;
     bool m_divide;
     bool m_rg_type; //Condition whether or not the region growing will be "adaptative"
+    // Used when m_random is false: x, y of each seed
+    std::vector<std::pair<int, int>> m_points;
 
     SeedRGParameter() : m_threshold(5.0f), m_adaptation(50), m_seednb(100), m_comp_algorithm(0),
                         m_random(true), m_divide(true), m_rg_type(true){};

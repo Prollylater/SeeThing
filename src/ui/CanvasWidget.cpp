@@ -40,7 +40,7 @@ namespace ui
         }
     }
 
-    CanvasInput canvasWidget(const char *id, const gpu::Texture &tex, CanvasView &view)
+    CanvasInput canvasWidget(const char *id, const gpu::Texture &tex, CanvasView &view, bool leftPans)
     {
         CanvasInput input;
         ImGui::PushID(id);
@@ -69,19 +69,19 @@ namespace ui
         const bool hovered = ImGui::IsItemHovered();
         const bool active = ImGui::IsItemActive();
         const ImGuiIO &io = ImGui::GetIO();
-        const bool spaceHeld = ImGui::IsKeyDown(ImGuiKey_Space);
+        const bool leftDragPans = leftPans || ImGui::IsKeyDown(ImGuiKey_Space);
 
         if (hovered && io.MouseWheel != 0.0f)
             view.zoomAround(vec(io.MousePos), origin, CanvasView::stepZoom(view.zoom, io.MouseWheel));
         if (active && (ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0.0f) || ImGui::IsMouseDragging(ImGuiMouseButton_Middle, 0.0f) ||
-                       (spaceHeld && ImGui::IsMouseDown(ImGuiMouseButton_Left))))
+                       (leftDragPans && ImGui::IsMouseDown(ImGuiMouseButton_Left))))
             view.pan += vec(io.MouseDelta);
         // Whole screen pixels keep nearest sampling crisp
         view.pan = {std::round(view.pan.x), std::round(view.pan.y)};
 
         ImGuiStorage *storage = ImGui::GetStateStorage();
         bool painting = storage->GetBool(itemId, false);
-        if (ImGui::IsItemActivated() && io.MouseClicked[ImGuiMouseButton_Left] && !spaceHeld)
+        if (ImGui::IsItemActivated() && io.MouseClicked[ImGuiMouseButton_Left] && !leftDragPans)
         {
             painting = true;
             input.strokeStarted = true;
@@ -96,6 +96,8 @@ namespace ui
         input.hovered = hovered;
         input.painting = painting;
         input.mouse = view.toImage(vec(io.MousePos), origin);
+        input.origin = origin;
+        input.size = size;
 
         const core::Vec2f viewEnd = origin + size;
         ImDrawList *dl = ImGui::GetWindowDrawList();

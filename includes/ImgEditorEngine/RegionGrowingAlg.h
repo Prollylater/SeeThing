@@ -64,6 +64,26 @@ std::queue<std::shared_ptr<Pixl>> putGerms(const Mat<T> &img, std::vector<Region
     return seedlist;
 }
 
+// One region per given position (x, y); positions outside the image are skipped
+template <typename T>
+std::queue<std::shared_ptr<Pixl>> putGermsAt(const Mat<T> &img, std::vector<Region> &regions, const std::vector<std::pair<int, int>> &points)
+{
+    std::vector<std::pair<int, int>> inside;
+    for (const auto &[x, y] : points)
+        if (x >= 0 && y >= 0 && x < img.getCols() && y < img.getRows())
+            inside.push_back({x, y});
+    regions.clear();
+    regions.resize(inside.size());
+    std::queue<std::shared_ptr<Pixl>> seedlist;
+    for (std::size_t i = 0; i < inside.size(); ++i)
+    {
+        std::shared_ptr<Pixl> pix(new Pixl(inside[i].first, inside[i].second, int(i)));
+        seedlist.push(pix);
+        regions[i].addGerm(pix, img);
+    }
+    return seedlist;
+}
+
 // Pose des germes aléatoire après division de l'image
 template <typename T>
 std::queue<std::shared_ptr<Pixl>> putGermsDivide(const Mat<T> &img, std::vector<Region> &regions, int n)

@@ -2,6 +2,8 @@
 #define UI_SHELL_H
 
 #include "panels/CanvasPanel.h"
+#include "panels/HistoryPanel.h"
+#include "panels/LayersPanel.h"
 #include "panels/LogPanel.h"
 #include "panels/ResultPanel.h"
 #include "panels/SegmentationPanel.h"
@@ -34,6 +36,7 @@ namespace ui
         void saveImageDialog();
         void saveResultDialog();
         bool &segmentationOpen() { return m_showSegmentation; }
+        bool dialogOpen() const { return m_openDialog.IsOpened() || m_saveDialog.IsOpened(); }
 
     private:
         enum class SaveTarget
@@ -53,7 +56,10 @@ namespace ui
         SegmentationPanel m_segmentation;
         ResultPanel m_result;
         LogPanel m_logPanel;
-        bool m_showImage = true, m_showSegmentation = true, m_showLog = true, m_showControls = false;
+        LayersPanel m_layers;
+        HistoryPanel m_history;
+        bool m_showImage = true, m_showSegmentation = true, m_showLog = true, m_showLayers = true, m_showHistory = true;
+        bool m_showControls = false;
         bool m_resetLayout = false;
         ImGui::FileBrowser m_openDialog;
         ImGui::FileBrowser m_saveDialog;

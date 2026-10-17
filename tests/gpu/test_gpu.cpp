@@ -7,7 +7,9 @@
 #include "gpu/Texture.h"
 
 #include <algorithm>
+#include <array>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -189,6 +191,129 @@ TEST_CASE("Renderer: retired objects live until endFrame")
     CHECK(renderer.retiredCount() == 0);
     CHECK_FALSE(glIsTexture(texId));
     CHECK_FALSE(glIsFramebuffer(fboId));
+}
+
+TEST_CASE("Texture: rectangles upload and read back in place")
+{
+    gpu::Texture tex = gpu::Texture::fromImage<std::uint8_t>(pattern(9, 7, 4));
+    Image<std::uint8_t> patch = pattern(3, 2, 4);
+    patch.fill(7);
+    tex.upload(4, 5, patch);
+    CHECK(samePixels(tex.download8({4, 5, 3, 2}), patch));
+    const Image<std::uint8_t> all = tex.download8();
+    CHECK(all(3, 5, 0) == pattern(9, 7, 4)(3, 5, 0));
+    CHECK(all(6, 6, 2) == 7);
+    CHECK_THROWS_AS(tex.upload(7, 5, patch), std::invalid_argument);
+    CHECK_THROWS_AS(tex.download8({0, 0, 10, 1}), std::invalid_argument);
+}
+
+namespace
+{
+    // The same W3C formula as composite.frag, in float
+    std::array<float, 4> referenceOver(std::array<float, 4> b, std::array<float, 4> s, float opacity, core::BlendMode mode)
+    {
+        auto blend = [mode](float cb, float cs) {
+            switch (mode)
+            {
+            case core::BlendMode::Multiply: return cb * cs;
+            case core::BlendMode::Screen: return cb + cs - cb * cs;
+            case core::BlendMode::Overlay: return cb < 0.5f ? 2 * cb * cs : 1 - 2 * (1 - cb) * (1 - cs);
+            case core::BlendMode::Difference: return std::fabs(cb - cs);
+            case core::BlendMode::Normal: break;
+            }
+            return cs;
+        };
+        const float as = s[3] * opacity, ab = b[3];
+        const float ao = as + ab * (1 - as);
+        std::array<float, 4> out{0, 0, 0, ao};
+        for (int k = 0; k < 3; ++k)
+        {
+            const float mixed = (1 - ab) * s[k] + ab * blend(b[k], s[k]);
+            out[k] = ao > 0 ? (as * mixed + ab * (1 - as) * b[k]) / ao : 0;
+        }
+        return out;
+    }
+}
+
+TEST_CASE("Renderer: composite matches the W3C formulas in every mode")
+{
+    gpu::Renderer renderer(SEETHING_SHADER_DIR);
+    const int w = 16, h = 16;
+    Image<std::uint8_t> back(w, h, 4), src(w, h, 4);
+    std::mt19937 rng(3);
+    for (std::size_t i = 0; i < back.size(); ++i)
+    {
+        back.data()[i] = std::uint8_t(rng());
+        src.data()[i] = std::uint8_t(rng());
+    }
+    // Opaque and fully transparent pixels too
+    for (int x = 0; x < w; ++x)
+    {
+        back(x, 0, 3) = 255;
+        src(x, 1, 3) = 0;
+        back(x, 2, 3) = 0;
+    }
+    gpu::Texture backTex = gpu::Texture::fromImage<std::uint8_t>(back), srcTex = gpu::Texture::fromImage<std::uint8_t>(src);
+    gpu::Texture dst = blankRGBA(w, h);
+    gpu::Framebuffer fbo(dst);
+
+    for (core::BlendMode mode : core::blendModes)
+        for (float opacity : {1.0f, 0.4f})
+        {
+            CAPTURE(core::blendModeName(mode));
+            CAPTURE(opacity);
+            renderer.composite(backTex, srcTex, opacity, mode, fbo);
+            const Image<std::uint8_t> out = dst.download8();
+            int worst = 0;
+            for (int y = 0; y < h; ++y)
+                for (int x = 0; x < w; ++x)
+                {
+                    std::array<float, 4> b, s;
+                    for (int k = 0; k < 4; ++k)
+                    {
+                        b[k] = back(x, y, k) / 255.0f;
+                        s[k] = src(x, y, k) / 255.0f;
+                    }
+                    const std::array<float, 4> want = referenceOver(b, s, opacity, mode);
+                    // Colour is meaningless where nothing is left
+                    const int channels = out(x, y, 3) == 0 ? 3 : 0;
+                    for (int k = channels; k < 4; ++k)
+                        worst = std::max(worst, std::abs(int(out(x, y, k)) - int(std::lround(want[k] * 255.0f))));
+                }
+            CHECK(worst <= 1);
+        }
+}
+
+TEST_CASE("Renderer: clear fills the target")
+{
+    gpu::Renderer renderer(SEETHING_SHADER_DIR);
+    gpu::Texture dst = gpu::Texture::fromImage<std::uint8_t>(pattern(3, 3, 4));
+    gpu::Framebuffer fbo(dst);
+    renderer.clear(fbo);
+    const Image<std::uint8_t> out = dst.download8();
+    CHECK(std::all_of(out.data(), out.data() + out.size(), [](std::uint8_t v) { return v == 0; }));
+}
+
+TEST_CASE("Renderer: points respect a clip mask")
+{
+    gpu::Renderer renderer(SEETHING_SHADER_DIR);
+    gpu::Texture dst = blankRGBA(8, 4);
+    gpu::Framebuffer fbo(dst);
+    // Left half selected
+    Image<std::uint8_t> mask(8, 4, 1);
+    for (int y = 0; y < 4; ++y)
+        for (int x = 0; x < 4; ++x)
+            mask(x, y) = 255;
+    gpu::Texture clip = gpu::Texture::fromImage<std::uint8_t>(mask);
+
+    const core::Vec2f row[] = {{1, 1}, {2, 1}, {3, 1}, {4, 1}, {5, 1}, {6, 1}};
+    renderer.drawPoints(fbo, row, {1, 1, 1}, 1.0f, &clip);
+    const Image<std::uint8_t> out = dst.download8();
+    for (int x = 1; x <= 6; ++x)
+    {
+        CAPTURE(x);
+        CHECK(out(x, 1, 0) == (x < 4 ? 255 : 0));
+    }
 }
 
 TEST_CASE("Program: a compile error gives an empty program and the info log")

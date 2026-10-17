@@ -1,45 +1,176 @@
 #include "ImgEditorEngine.h"
 
-#include "core/Color.h"
 #include "core/ImageIO.h"
+
+#include <cmath>
+#include <vector>
 
 OpenGLEngine::OpenGLEngine(const std::string &shader_dir, core::Log &log) : m_renderer(shader_dir, &log)
 {
 }
 
-void OpenGLEngine::setMainImage(core::ImageView<const uint8_t> image)
+void OpenGLEngine::clear()
 {
-    // RGBA8 whatever the file holds: the main texture is a render target
-    gpu::Texture tex = gpu::Texture::fromImage<uint8_t>(core::toRGBA8(image));
-    gpu::Framebuffer fbo(tex);
-    // The old texture may still be drawn this frame
-    m_renderer.retire(std::move(m_main_fbo));
-    m_renderer.retire(std::move(m_main_tex));
-    m_main_tex = std::move(tex);
-    m_main_fbo = std::move(fbo);
+    // Textures may still be drawn this frame
+    for (auto &[id, l] : m_layers)
+    {
+        m_renderer.retire(std::move(l.fbo));
+        m_renderer.retire(std::move(l.tex));
+    }
+    m_layers.clear();
+    m_renderer.retire(std::move(m_selection));
+    m_renderer.retire(std::move(m_composite_fbo));
+    m_renderer.retire(std::move(m_composite));
+    for (int i = 0; i < 2; ++i)
+    {
+        m_renderer.retire(std::move(m_scratch_fbo[i]));
+        m_renderer.retire(std::move(m_scratch[i]));
+    }
+    m_stroke.reset();
+    m_serial = 0;
+    m_stale = true;
 }
 
-void OpenGLEngine::clearMain()
+void OpenGLEngine::resize(int width, int height)
 {
-    m_renderer.retire(std::move(m_main_fbo));
-    m_renderer.retire(std::move(m_main_tex));
+    clear();
+    m_selection = gpu::Texture(width, height, core::PixelFormat::R8);
+    m_composite = gpu::Texture(width, height, core::PixelFormat::RGBA8);
+    m_composite_fbo = gpu::Framebuffer(m_composite);
+    for (int i = 0; i < 2; ++i)
+    {
+        m_scratch[i] = gpu::Texture(width, height, core::PixelFormat::RGBA8);
+        m_scratch_fbo[i] = gpu::Framebuffer(m_scratch[i]);
+    }
 }
 
-bool OpenGLEngine::saveMain(const std::string &path, std::string *error) const
+void OpenGLEngine::sync(doc::Document &doc)
 {
-    if (!hasImage())
+    if (doc.empty())
+    {
+        if (m_serial != 0)
+            clear();
+        return;
+    }
+    if (doc.serial() != m_serial)
+    {
+        resize(doc.width(), doc.height());
+        m_serial = doc.serial();
+        m_selection.upload(doc.selection());
+        doc.takeSelectionDirty();
+    }
+    else if (doc.revision() == m_revision && !m_stale)
+    {
+        return;
+    }
+
+    // Layers gone from the document lose their textures; an undo brings them back with a full upload
+    for (auto it = m_layers.begin(); it != m_layers.end();)
+    {
+        if (doc.find(it->first) || (m_stroke && m_stroke->layer == it->first))
+        {
+            ++it;
+            continue;
+        }
+        m_renderer.retire(std::move(it->second.fbo));
+        m_renderer.retire(std::move(it->second.tex));
+        it = m_layers.erase(it);
+    }
+    for (int i = 0; i < doc.layerCount(); ++i)
+    {
+        const doc::Layer &layer = doc.layer(i);
+        const core::Recti dirty = doc.takeDirty(layer.id());
+        auto it = m_layers.find(layer.id());
+        if (it == m_layers.end())
+        {
+            LayerGpu l;
+            l.tex = gpu::Texture::fromImage<std::uint8_t>(layer.pixels());
+            l.fbo = gpu::Framebuffer(l.tex);
+            m_layers.emplace(layer.id(), std::move(l));
+        }
+        else if (!dirty.empty())
+        {
+            it->second.tex.upload(dirty.x, dirty.y, layer.pixels().view().sub(dirty.x, dirty.y, dirty.w, dirty.h));
+        }
+    }
+    if (const core::Recti dirty = doc.takeSelectionDirty(); !dirty.empty())
+        m_selection.upload(dirty.x, dirty.y, doc.selection().view().sub(dirty.x, dirty.y, dirty.w, dirty.h));
+
+    composite(doc);
+    m_revision = doc.revision();
+    m_stale = false;
+}
+
+// Bottom to top, each visible layer over what is below; the last pass writes the composite
+void OpenGLEngine::composite(const doc::Document &doc)
+{
+    std::vector<const doc::Layer *> visible;
+    for (int i = 0; i < doc.layerCount(); ++i)
+        if (doc.layer(i).props().visible && doc.layer(i).props().opacity > 0.0f)
+            visible.push_back(&doc.layer(i));
+    if (visible.empty())
+    {
+        m_renderer.clear(m_composite_fbo);
+        return;
+    }
+    m_renderer.clear(m_scratch_fbo[0]);
+    int backdrop = 0;
+    for (std::size_t i = 0; i < visible.size(); ++i)
+    {
+        const doc::LayerProps &p = visible[i]->props();
+        const bool last = i + 1 == visible.size();
+        const gpu::Framebuffer &dst = last ? m_composite_fbo : m_scratch_fbo[1 - backdrop];
+        m_renderer.composite(m_scratch[backdrop], m_layers.at(visible[i]->id()).tex, p.opacity, p.blend, dst);
+        backdrop = 1 - backdrop;
+    }
+}
+
+bool OpenGLEngine::saveComposite(const std::string &path, std::string *error) const
+{
+    if (m_composite.empty())
     {
         if (error)
             *error = "No image to save";
         return false;
     }
-    return core::saveImage(path, m_main_tex.download8(), error);
+    return core::saveImage(path, m_composite.download8(), error);
 }
 
-void OpenGLEngine::paint(std::span<const core::Vec2f> pixels, core::Vec3f color, float size)
+void OpenGLEngine::beginStroke(doc::Document &doc, doc::LayerId layer)
 {
-    if (hasImage())
-        m_renderer.drawPoints(m_main_fbo, pixels, color, size);
+    sync(doc);
+    m_stroke = Stroke{layer, {}};
+}
+
+void OpenGLEngine::strokePoints(const doc::Document &doc, std::span<const core::Vec2f> pixels, core::Vec3f color, float size)
+{
+    if (!m_stroke || pixels.empty())
+        return;
+    auto it = m_layers.find(m_stroke->layer);
+    if (it == m_layers.end())
+        return;
+    m_renderer.drawPoints(it->second.fbo, pixels, color, size, doc.hasSelection() ? &m_selection : nullptr);
+    // Each square spans pixel + 0.5 +- size / 2
+    const int reach = int(std::ceil(size * 0.5f));
+    for (core::Vec2f p : pixels)
+    {
+        const int x = int(p.x), y = int(p.y);
+        m_stroke->rect = core::unite(m_stroke->rect, {x - reach, y - reach, 2 * reach + 1, 2 * reach + 1});
+    }
+    m_stroke->rect = core::intersect(m_stroke->rect, {0, 0, it->second.tex.width(), it->second.tex.height()});
+    m_stale = true;
+}
+
+std::optional<OpenGLEngine::StrokeResult> OpenGLEngine::endStroke()
+{
+    if (!m_stroke)
+        return std::nullopt;
+    const Stroke stroke = *m_stroke;
+    m_stroke.reset();
+    auto it = m_layers.find(stroke.layer);
+    if (it == m_layers.end() || stroke.rect.empty())
+        return std::nullopt;
+    return StrokeResult{stroke.layer, stroke.rect, it->second.tex.download8(stroke.rect)};
 }
 
 void OpenGLEngine::setResult(core::ImageView<const uint8_t> image)
@@ -54,25 +185,6 @@ void OpenGLEngine::clearResult()
     m_renderer.retire(std::move(m_result_tex));
 }
 
-bool OpenGLEngine::saveResult(const std::string &path, std::string *error) const
-{
-    if (!hasResult())
-    {
-        if (error)
-            *error = "No result to save";
-        return false;
-    }
-    return core::saveImage(path, m_result_tex.download8(), error);
-}
-
-bool OpenGLEngine::transferResultToMain()
-{
-    if (!hasImage() || !hasResult() || m_result_tex.width() != m_main_tex.width() || m_result_tex.height() != m_main_tex.height())
-        return false;
-    m_renderer.blit(m_result_tex, m_main_fbo);
-    return true;
-}
-
 void OpenGLEngine::endFrame()
 {
     m_renderer.endFrame();
@@ -82,7 +194,8 @@ void OpenGLEngine::endFrame()
     if (now - m_last_shader_check > std::chrono::milliseconds(500))
     {
         m_last_shader_check = now;
-        m_renderer.shaders().reloadChanged();
+        if (m_renderer.shaders().reloadChanged() > 0)
+            m_stale = true;
     }
 #endif
 }

@@ -3,8 +3,10 @@
 
 #include "ui/CanvasView.h"
 #include "ui/CanvasWidget.h"
+#include "ui/tools/Tool.h"
 
-#include "imgui.h"
+#include <memory>
+#include <vector>
 
 class App;
 
@@ -12,23 +14,29 @@ namespace ui
 {
     class Shell;
 
-    // The main image with the pencil
+    // The composite of the visible layers, the toolbox and the active tool's options
     class CanvasPanel
     {
     public:
         static constexpr const char *name = "Image";
 
+        CanvasPanel();
         void draw(App &app, Shell &shell, bool &open);
         CanvasView &view() { return m_view; }
+        // Ends a gesture in progress first
+        void selectTool(App &app, std::size_t index);
 
     private:
-        void paint(App &app, const CanvasInput &input);
+        void cancelGesture(App &app);
+        void drawToolbox(App &app, Shell &shell);
+        void handleInput(App &app, const CanvasInput &input);
+        void drawSeeds(const App &app, const CanvasInput &input) const;
 
         CanvasView m_view;
-        bool m_pencil = false;
-        ImVec4 m_color{0.90f, 0.20f, 0.20f, 1.0f};
-        int m_size = 2;
-        core::Vec2f m_last;
+        ToolShared m_shared;
+        std::vector<std::unique_ptr<Tool>> m_tools;
+        std::size_t m_tool = 0;
+        bool m_gesture = false;
     };
 }
 

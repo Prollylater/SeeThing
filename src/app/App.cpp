@@ -2,16 +2,29 @@
 
 #include "AssetPath.h"
 #include "MatBridge.h"
+#include "core/Color.h"
 #include "core/ImageIO.h"
+#include "doc/Edits.h"
+#include "RegionFill.h"
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
+#include <format>
 
 namespace
 {
     std::string fileName(const std::string &path)
     {
         return std::filesystem::path(path).filename().string();
+    }
+
+    core::Image<std::uint8_t> copyOf(core::ImageView<const std::uint8_t> v)
+    {
+        core::Image<std::uint8_t> out(v.width(), v.height(), v.channels());
+        for (int y = 0; y < v.height(); ++y)
+            std::copy_n(v.row(y), std::size_t(v.width()) * v.channels(), out.row(y));
+        return out;
     }
 
     template <class F>
@@ -45,6 +58,7 @@ void App::run()
 
         m_shell.beginFrame();
         m_shell.draw();
+        m_gpu.sync(m_doc);
         m_shell.render(m_platform);
         m_platform.swapBuffers();
         m_gpu.endFrame();
@@ -59,27 +73,25 @@ bool App::openImage(const std::string &path)
         m_log.error("{}", loaded.error);
         return false;
     }
-    m_gpu.setMainImage(loaded.image);
-    m_gpu.clearResult();
-    // Only layer 0 for now: replace it, don't stack a new one
-    Layer layer(std::move(loaded.image));
-    if (m_canvas.getLayerNb() > 0)
-        m_canvas.getLayer(0) = std::move(layer);
-    else
-        m_canvas.addLayer(std::move(layer));
+    const int channels = loaded.image.channels();
+    m_gpu.endStroke();
+    doc::Document doc(loaded.image.width(), loaded.image.height());
+    doc.insertLayer(0, doc::Layer(fileName(path), core::toRGBA8(loaded.image)));
+    m_doc = std::move(doc);
+    discardResult();
 
     m_image_path = path;
     m_save_path.clear();
-    const Layer &l = m_canvas.getLayer(0);
-    m_log.info("Opened {} ({} x {}, {} channels)", path, l.getWidth(), l.getHeight(), l.image.channels());
+    m_log.info("Opened {} ({} x {}, {} channels)", path, m_doc.width(), m_doc.height(), channels);
     updateTitle();
     return true;
 }
 
 bool App::saveImage(const std::string &path)
 {
+    m_gpu.sync(m_doc);
     std::string error;
-    if (!m_gpu.saveMain(path, &error))
+    if (!m_gpu.saveComposite(path, &error))
     {
         m_log.error("{}", error);
         return false;
@@ -92,46 +104,222 @@ bool App::saveImage(const std::string &path)
 
 void App::closeImage()
 {
-    m_gpu.clearMain();
-    m_gpu.clearResult();
-    m_canvas.clear();
+    m_gpu.endStroke();
+    m_doc = doc::Document();
+    discardResult();
     m_image_path.clear();
     m_save_path.clear();
     updateTitle();
 }
 
-void App::runSlic(const SlicParameter &param, int coloration)
+void App::undo()
 {
-    if (m_canvas.getLayerNb() == 0)
-        return;
-    Mat<uint8_t> input = toMat(m_canvas.getLayer(0).getImage());
-    Mat<uint8_t> output;
-    const double ms = millisecondsOf([&] { output = m_rg.dispatch(param, input, coloration); });
-    m_gpu.setResult(viewOf(output));
-    m_log.info("SLIC: K {}, compactness {}, {:.0f} ms", param.m_K, param.m_m, ms);
+    endStroke();
+    m_doc.undo();
 }
 
-void App::runSeeded(const SeedRGParameter &param, int coloration)
+void App::redo()
 {
-    if (m_canvas.getLayerNb() == 0)
+    endStroke();
+    m_doc.redo();
+}
+
+void App::jumpTo(std::size_t cursor)
+{
+    endStroke();
+    doc::History &h = m_doc.history();
+    while (h.cursor() > cursor && h.canUndo())
+        m_doc.undo();
+    while (h.cursor() < cursor && h.canRedo())
+        m_doc.redo();
+}
+
+bool App::beginStroke()
+{
+    const doc::Layer *layer = m_doc.activeLayer();
+    if (!layer)
+        return false;
+    if (layer->props().locked || !layer->props().visible)
+    {
+        m_log.warn("{} is {}; nothing painted", layer->props().name, layer->props().locked ? "locked" : "hidden");
+        return false;
+    }
+    m_gpu.beginStroke(m_doc, layer->id());
+    return true;
+}
+
+void App::strokePoints(std::span<const core::Vec2f> pixels, core::Vec3f color, float size)
+{
+    m_gpu.strokePoints(m_doc, pixels, color, size);
+}
+
+void App::endStroke()
+{
+    std::optional<OpenGLEngine::StrokeResult> stroke = m_gpu.endStroke();
+    if (!stroke || !m_doc.find(stroke->layer))
         return;
-    Mat<uint8_t> input = toMat(m_canvas.getLayer(0).getImage());
+    doc::PixelEditRecorder rec(m_doc, stroke->layer);
+    rec.touch(stroke->rect);
+    core::Image<std::uint8_t> &pixels = rec.image();
+    const core::Recti r = stroke->rect;
+    for (int y = 0; y < r.h; ++y)
+        std::copy_n(stroke->pixels.row(y), std::size_t(r.w) * 4, pixels.row(r.y + y) + std::size_t(r.x) * 4);
+    rec.commit("Pencil");
+}
+
+core::Image<std::uint8_t> App::activePixels() const
+{
+    const doc::Layer *layer = m_doc.activeLayer();
+    return layer ? core::toRGB8(layer->pixels()) : core::Image<std::uint8_t>();
+}
+
+std::optional<std::array<std::uint8_t, 4>> App::pickColor(core::Vec2i p, bool composite)
+{
+    if (m_doc.empty() || p.x < 0 || p.y < 0 || p.x >= m_doc.width() || p.y >= m_doc.height())
+        return std::nullopt;
+    if (composite)
+    {
+        m_gpu.sync(m_doc);
+        const core::Image<std::uint8_t> px = m_gpu.compositeTexture().download8({p.x, p.y, 1, 1});
+        return std::array<std::uint8_t, 4>{px(0, 0, 0), px(0, 0, 1), px(0, 0, 2), px(0, 0, 3)};
+    }
+    const doc::Layer *layer = m_doc.activeLayer();
+    if (!layer)
+        return std::nullopt;
+    const core::Image<std::uint8_t> &px = layer->pixels();
+    return std::array<std::uint8_t, 4>{px(p.x, p.y, 0), px(p.x, p.y, 1), px(p.x, p.y, 2), px(p.x, p.y, 3)};
+}
+
+bool App::bucketFill(core::Vec2i p, float threshold, int compare, std::array<std::uint8_t, 4> rgba)
+{
+    const doc::Layer *layer = m_doc.activeLayer();
+    if (!layer || p.x < 0 || p.y < 0 || p.x >= m_doc.width() || p.y >= m_doc.height())
+        return false;
+    if (layer->props().locked)
+    {
+        m_log.warn("{} is locked; nothing filled", layer->props().name);
+        return false;
+    }
+    endStroke();
+    doc::Shape region;
+    const double ms = millisecondsOf([&] { region = growRegion(activePixels(), p, threshold, compare); });
+    const bool filled = doc::fillMask(m_doc, layer->id(), region.mask, region.bounds, rgba, "Bucket fill");
+    m_log.info("Bucket fill at {}, {}: {} x {} box, {:.0f} ms", p.x, p.y, region.bounds.w, region.bounds.h, ms);
+    return filled;
+}
+
+bool App::magicWand(core::Vec2i p, float threshold, int compare, doc::SelectMode mode)
+{
+    if (!m_doc.activeLayer() || p.x < 0 || p.y < 0 || p.x >= m_doc.width() || p.y >= m_doc.height())
+        return false;
+    endStroke();
+    doc::Shape region;
+    const double ms = millisecondsOf([&] { region = growRegion(activePixels(), p, threshold, compare); });
+    const std::string label = mode == doc::SelectMode::Replace ? "Magic wand" : std::string("Magic wand (") + doc::selectModeName(mode) + ")";
+    m_log.info("Magic wand at {}, {}: {} x {} box, {:.0f} ms", p.x, p.y, region.bounds.w, region.bounds.h, ms);
+    return doc::applySelection(m_doc, region, mode, label);
+}
+
+void App::runSlic(const SlicParameter &param, int coloration)
+{
+    const doc::Layer *layer = m_doc.activeLayer();
+    if (!layer)
+        return;
+    endStroke();
+    Mat<uint8_t> input = toMat(activePixels());
     Mat<uint8_t> output;
     const double ms = millisecondsOf([&] { output = m_rg.dispatch(param, input, coloration); });
-    m_gpu.setResult(viewOf(output));
-    m_log.info("Seeded growing: {} seeds, threshold {:.1f}, {:.0f} ms", param.m_seednb, param.m_threshold, ms);
+    m_result_source = layer->id();
+    setResult(copyOf(viewOf(output)), std::format("SLIC K {}", param.m_K), std::format("SLIC: K {}, compactness {}", param.m_K, param.m_m));
+    m_log.info("SLIC on {}: K {}, compactness {}, {:.0f} ms", layer->props().name, param.m_K, param.m_m, ms);
+}
+
+void App::runSeeded(const SeedRGParameter &settings, int coloration)
+{
+    const doc::Layer *layer = m_doc.activeLayer();
+    if (!layer)
+        return;
+    SeedRGParameter param = settings;
+    if (!param.m_random)
+    {
+        if (m_doc.seeds().empty())
+        {
+            m_log.warn("No seeds placed; use the Seeds tool first");
+            return;
+        }
+        param.m_points.clear();
+        for (core::Vec2i p : m_doc.seeds())
+            param.m_points.push_back({p.x, p.y});
+        param.m_seednb = int(param.m_points.size());
+    }
+    endStroke();
+    Mat<uint8_t> input = toMat(activePixels());
+    Mat<uint8_t> output;
+    const double ms = millisecondsOf([&] { output = m_rg.dispatch(param, input, coloration); });
+    m_result_source = layer->id();
+    setResult(copyOf(viewOf(output)), std::format("Seeded {} seeds", param.m_seednb),
+              std::format("Seeded growing: {} seeds, threshold {:.1f}", param.m_seednb, param.m_threshold));
+    m_log.info("Seeded growing on {}: {} seeds, threshold {:.1f}, {:.0f} ms", layer->props().name, param.m_seednb, param.m_threshold, ms);
+}
+
+void App::setResult(core::Image<std::uint8_t> image, std::string label, std::string origin)
+{
+    m_result = std::move(image);
+    m_result_label = std::move(label);
+    m_result_origin = std::move(origin);
+    m_gpu.setResult(m_result);
 }
 
 bool App::saveResult(const std::string &path)
 {
     std::string error;
-    if (!m_gpu.saveResult(path, &error))
+    if (!core::saveImage(path, m_result, &error))
     {
         m_log.error("{}", error);
         return false;
     }
     m_log.info("Saved result to {}", path);
     return true;
+}
+
+void App::discardResult()
+{
+    setResult(core::Image<std::uint8_t>(), {}, {});
+    m_result_source = 0;
+}
+
+void App::addResultAsLayer()
+{
+    if (!hasResult() || m_doc.empty())
+        return;
+    if (m_result.width() != m_doc.width() || m_result.height() != m_doc.height())
+    {
+        m_log.error("The result and the image differ in size; no layer added");
+        return;
+    }
+    // Above its source when that still exists, else above the active layer
+    const int source = m_doc.indexOf(m_result_source);
+    doc::addLayer(m_doc, doc::Layer(m_result_label, core::toRGBA8(m_result), doc::LayerKind::Result, m_result_origin),
+                  source >= 0 ? source + 1 : -1, "Add " + m_result_label);
+}
+
+void App::copyResultToLayer()
+{
+    const doc::Layer *layer = m_doc.activeLayer();
+    if (!hasResult() || !layer)
+        return;
+    if (m_result.width() != m_doc.width() || m_result.height() != m_doc.height())
+    {
+        m_log.error("The result and the image differ in size; nothing copied");
+        return;
+    }
+    if (layer->props().locked)
+    {
+        m_log.warn("{} is locked; nothing copied", layer->props().name);
+        return;
+    }
+    endStroke();
+    doc::replacePixels(m_doc, layer->id(), m_result, "Copy " + m_result_label);
 }
 
 void App::updateTitle()

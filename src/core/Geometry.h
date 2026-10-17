@@ -1,6 +1,7 @@
 #ifndef CORE_GEOMETRY_H
 #define CORE_GEOMETRY_H
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <optional>
@@ -20,6 +21,12 @@ namespace core
         friend bool operator==(Vec2f a, Vec2f b) = default;
     };
 
+    struct Vec2i
+    {
+        int x = 0, y = 0;
+        friend bool operator==(Vec2i a, Vec2i b) = default;
+    };
+
     struct Vec3f
     {
         float x = 0, y = 0, z = 0;
@@ -33,6 +40,35 @@ namespace core
     };
 
     inline float dot(Vec3f a, Vec3f b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
+
+    // Pixel rectangle: x, y is the top-left pixel
+    struct Recti
+    {
+        int x = 0, y = 0, w = 0, h = 0;
+
+        bool empty() const { return w <= 0 || h <= 0; }
+        int right() const { return x + w; }
+        int bottom() const { return y + h; }
+        friend bool operator==(Recti a, Recti b) = default;
+    };
+
+    inline Recti unite(Recti a, Recti b)
+    {
+        if (a.empty())
+            return b;
+        if (b.empty())
+            return a;
+        const int x = std::min(a.x, b.x), y = std::min(a.y, b.y);
+        return {x, y, std::max(a.right(), b.right()) - x, std::max(a.bottom(), b.bottom()) - y};
+    }
+
+    // Empty when they don't overlap
+    inline Recti intersect(Recti a, Recti b)
+    {
+        const int x = std::max(a.x, b.x), y = std::max(a.y, b.y);
+        const int r = std::min(a.right(), b.right()), bt = std::min(a.bottom(), b.bottom());
+        return r > x && bt > y ? Recti{x, y, r - x, bt - y} : Recti{};
+    }
 
     // Row-major: m[row][col]
     struct Mat3f
