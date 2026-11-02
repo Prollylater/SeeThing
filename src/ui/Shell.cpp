@@ -34,6 +34,7 @@ namespace ui
             icons.MergeMode = true;
             icons.PixelSnapH = true;
             icons.GlyphMinAdvanceX = 14.0f;
+            icons.GlyphOffset.y = 4.0f;
             io.Fonts->AddFontFromFileTTF(assetPath("fonts/codicon.ttf").c_str(), 16.0f, &icons);
         }
 
