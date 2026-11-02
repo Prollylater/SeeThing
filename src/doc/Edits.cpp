@@ -13,20 +13,20 @@ namespace doc
     {
         using Pixels = core::Image<std::uint8_t>;
 
-        Pixels copyOut(const Pixels &img, core::Recti r)
+        Pixels copyOut(const Pixels &img, core::Recti rect)
         {
-            const int c = img.channels();
-            Pixels out(r.w, r.h, c, img.colorSpace());
-            for (int y = 0; y < r.h; ++y)
-                std::copy_n(img.row(r.y + y) + std::size_t(r.x) * c, std::size_t(r.w) * c, out.row(y));
+            const int channels = img.channels();
+            Pixels out(rect.w, rect.h, channels, img.colorSpace());
+            for (int y = 0; y < rect.h; ++y)
+                std::copy_n(img.row(rect.y + y) + std::size_t(rect.x) * channels, std::size_t(rect.w) * channels, out.row(y));
             return out;
         }
 
-        void pasteIn(Pixels &img, core::Recti r, const Pixels &tile)
+        void pasteIn(Pixels &img, core::Recti rect, const Pixels &tile)
         {
-            const int c = img.channels();
-            for (int y = 0; y < r.h; ++y)
-                std::copy_n(tile.row(y), std::size_t(r.w) * c, img.row(r.y + y) + std::size_t(r.x) * c);
+            const int channels = img.channels();
+            for (int y = 0; y < rect.h; ++y)
+                std::copy_n(tile.row(y), std::size_t(rect.w) * channels, img.row(rect.y + y) + std::size_t(rect.x) * channels);
         }
 
         bool samePixels(const Pixels &a, const Pixels &b)
@@ -59,8 +59,8 @@ namespace doc
             PixelEdit(LayerId target, std::string label, std::vector<Tile> tiles)
                 : m_target(target), m_label(std::move(label)), m_tiles(std::move(tiles))
             {
-                for (const Tile &t : m_tiles)
-                    m_bytes += t.before.size() + t.after.size();
+                for (const Tile &tile : m_tiles)
+                    m_bytes += tile.before.size() + tile.after.size();
             }
 
             std::string label() const override { return m_label; }
@@ -73,10 +73,10 @@ namespace doc
             {
                 Pixels &img = targetImage(doc, m_target);
                 core::Recti changed;
-                for (const Tile &t : m_tiles)
+                for (const Tile &tile : m_tiles)
                 {
-                    pasteIn(img, t.rect, t.*state);
-                    changed = core::unite(changed, t.rect);
+                    pasteIn(img, tile.rect, tile.*state);
+                    changed = core::unite(changed, tile.rect);
                 }
                 notify(doc, m_target, changed);
             }
@@ -218,10 +218,10 @@ namespace doc
         std::vector<PixelEdit::Tile> tiles;
         for (auto &[key, before] : m_before)
         {
-            const core::Recti r = core::intersect({key.first * tileSize, key.second * tileSize, tileSize, tileSize}, m_doc.bounds());
-            Pixels after = copyOut(*m_image, r);
+            const core::Recti rect = core::intersect({key.first * tileSize, key.second * tileSize, tileSize, tileSize}, m_doc.bounds());
+            Pixels after = copyOut(*m_image, rect);
             if (!samePixels(before, after))
-                tiles.push_back({r, std::move(before), std::move(after)});
+                tiles.push_back({rect, std::move(before), std::move(after)});
         }
         m_before.clear();
         notify(m_doc, m_target, std::exchange(m_touched, core::Recti{}));
@@ -283,9 +283,9 @@ namespace doc
 
     void recordLayerProps(Document &doc, int index, const LayerProps &before, std::string label)
     {
-        const Layer &l = doc.layer(index);
-        if (before != l.props())
-            doc.history().record(std::make_unique<SetProps>(l.id(), before, l.props(), std::move(label)));
+        const Layer &layer = doc.layer(index);
+        if (before != layer.props())
+            doc.history().record(std::make_unique<SetProps>(layer.id(), before, layer.props(), std::move(label)));
     }
 
     bool replacePixels(Document &doc, LayerId id, core::ImageView<const std::uint8_t> image, std::string label)
@@ -317,25 +317,25 @@ namespace doc
         return rec.commit(std::move(label));
     }
 
-    void addSeed(Document &doc, core::Vec2i p)
+    void addSeed(Document &doc, core::Vec2i pixel)
     {
-        if (p.x < 0 || p.y < 0 || p.x >= doc.width() || p.y >= doc.height())
+        if (pixel.x < 0 || pixel.y < 0 || pixel.x >= doc.width() || pixel.y >= doc.height())
             return;
         std::vector<core::Vec2i> seeds = doc.seeds();
-        if (std::find(seeds.begin(), seeds.end(), p) != seeds.end())
+        if (std::find(seeds.begin(), seeds.end(), pixel) != seeds.end())
             return;
-        seeds.push_back(p);
+        seeds.push_back(pixel);
         changeSeeds(doc, std::move(seeds), "Add seed");
     }
 
-    bool removeSeedNear(Document &doc, core::Vec2f p, float radius)
+    bool removeSeedNear(Document &doc, core::Vec2f point, float radius)
     {
         std::vector<core::Vec2i> seeds = doc.seeds();
         auto best = seeds.end();
         float bestDist = radius * radius;
         for (auto it = seeds.begin(); it != seeds.end(); ++it)
         {
-            const float dx = it->x + 0.5f - p.x, dy = it->y + 0.5f - p.y;
+            const float dx = it->x + 0.5f - point.x, dy = it->y + 0.5f - point.y; // offset from the point to the seed
             if (dx * dx + dy * dy <= bestDist)
             {
                 bestDist = dx * dx + dy * dy;
@@ -367,6 +367,6 @@ namespace doc
 
     bool invertSelection(Document &doc)
     {
-        return editSelection(doc, "Invert Selection", [](std::uint8_t v) { return std::uint8_t(255 - v); });
+        return editSelection(doc, "Invert Selection", [](std::uint8_t value) { return std::uint8_t(255 - value); });
     }
 }

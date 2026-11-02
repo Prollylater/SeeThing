@@ -15,10 +15,10 @@ namespace doc
             return {core::Image<std::uint8_t>(width, height, 1, core::ColorSpace::Mask), {}};
         }
 
-        void include(Shape &s, int x, int y)
+        void include(Shape &shape, int x, int y)
         {
-            s.mask(x, y) = 255;
-            s.bounds = core::unite(s.bounds, {x, y, 1, 1});
+            shape.mask(x, y) = 255;
+            shape.bounds = core::unite(shape.bounds, {x, y, 1, 1});
         }
     }
 
@@ -36,56 +36,56 @@ namespace doc
 
     Shape rectShape(int width, int height, core::Recti rect)
     {
-        Shape s = emptyShape(width, height);
-        const core::Recti r = core::intersect(rect, {0, 0, width, height});
-        for (int y = r.y; y < r.bottom(); ++y)
-            std::fill_n(s.mask.row(y) + r.x, r.w, std::uint8_t(255));
-        s.bounds = r;
-        return s;
+        Shape shape = emptyShape(width, height);
+        const core::Recti clipped = core::intersect(rect, {0, 0, width, height});
+        for (int y = clipped.y; y < clipped.bottom(); ++y)
+            std::fill_n(shape.mask.row(y) + clipped.x, clipped.w, std::uint8_t(255));
+        shape.bounds = clipped;
+        return shape;
     }
 
     Shape ellipseShape(int width, int height, core::Recti box)
     {
-        Shape s = emptyShape(width, height);
+        Shape shape = emptyShape(width, height);
         if (box.empty())
-            return s;
-        const float rx = box.w * 0.5f, ry = box.h * 0.5f;
-        const float cx = box.x + rx, cy = box.y + ry;
-        const core::Recti r = core::intersect(box, {0, 0, width, height});
-        for (int y = r.y; y < r.bottom(); ++y)
-            for (int x = r.x; x < r.right(); ++x)
+            return shape;
+        const float rx = box.w * 0.5f, ry = box.h * 0.5f; // ellipse radii
+        const float cx = box.x + rx, cy = box.y + ry; // ellipse center
+        const core::Recti clipped = core::intersect(box, {0, 0, width, height});
+        for (int y = clipped.y; y < clipped.bottom(); ++y)
+            for (int x = clipped.x; x < clipped.right(); ++x)
             {
-                const float dx = (x + 0.5f - cx) / rx, dy = (y + 0.5f - cy) / ry;
+                const float dx = (x + 0.5f - cx) / rx, dy = (y + 0.5f - cy) / ry; // offset from the center, in radii
                 if (dx * dx + dy * dy <= 1.0f)
-                    include(s, x, y);
+                    include(shape, x, y);
             }
-        return s;
+        return shape;
     }
 
     // Scanline: on each row, the edges crossing the pixel centres' line, sorted, fill between pairs
     Shape polygonShape(int width, int height, std::span<const core::Vec2f> points)
     {
-        Shape s = emptyShape(width, height);
+        Shape shape = emptyShape(width, height);
         if (points.size() < 3)
-            return s;
+            return shape;
         float top = points[0].y, bottom = points[0].y;
-        for (core::Vec2f p : points)
+        for (core::Vec2f point : points)
         {
-            top = std::min(top, p.y);
-            bottom = std::max(bottom, p.y);
+            top = std::min(top, point.y);
+            bottom = std::max(bottom, point.y);
         }
         std::vector<float> crossings;
         const int y0 = std::max(0, int(std::floor(top))), y1 = std::min(height - 1, int(std::ceil(bottom)));
         for (int y = y0; y <= y1; ++y)
         {
-            const float cy = y + 0.5f;
+            const float cy = y + 0.5f; // y of the row's pixel centers
             crossings.clear();
             for (std::size_t i = 0; i < points.size(); ++i)
             {
-                const core::Vec2f a = points[i], b = points[(i + 1) % points.size()];
+                const core::Vec2f from = points[i], to = points[(i + 1) % points.size()];
                 // Half-open in y, so a vertex on the line counts once
-                if ((a.y <= cy) != (b.y <= cy))
-                    crossings.push_back(a.x + (cy - a.y) / (b.y - a.y) * (b.x - a.x));
+                if ((from.y <= cy) != (to.y <= cy))
+                    crossings.push_back(from.x + (cy - from.y) / (to.y - from.y) * (to.x - from.x));
             }
             std::sort(crossings.begin(), crossings.end());
             for (std::size_t i = 0; i + 1 < crossings.size(); i += 2)
@@ -94,10 +94,10 @@ namespace doc
                 const int xa = std::max(0, int(std::ceil(crossings[i] - 0.5f)));
                 const int xb = std::min(width, int(std::ceil(crossings[i + 1] - 0.5f)));
                 for (int x = xa; x < xb; ++x)
-                    include(s, x, y);
+                    include(shape, x, y);
             }
         }
-        return s;
+        return shape;
     }
 
     bool applySelection(Document &doc, const Shape &shape, SelectMode mode, std::string label)
@@ -114,13 +114,13 @@ namespace doc
             for (int x = area.x; x < area.right(); ++x)
             {
                 const std::uint8_t in = shape.mask(x, y);
-                std::uint8_t &v = sel(x, y);
+                std::uint8_t &value = sel(x, y);
                 switch (mode)
                 {
-                case SelectMode::Replace: v = in; break;
-                case SelectMode::Add: v = std::max(v, in); break;
-                case SelectMode::Subtract: v = std::min(v, std::uint8_t(255 - in)); break;
-                case SelectMode::Intersect: v = std::min(v, in); break;
+                case SelectMode::Replace: value = in; break;
+                case SelectMode::Add: value = std::max(value, in); break;
+                case SelectMode::Subtract: value = std::min(value, std::uint8_t(255 - in)); break;
+                case SelectMode::Intersect: value = std::min(value, in); break;
                 }
             }
         return rec.commit(std::move(label));

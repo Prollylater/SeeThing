@@ -33,9 +33,9 @@ TEST_CASE("Color: sRGB to Lab matches reference values")
 TEST_CASE("Color: Lab to sRGB inverts sRGB to Lab")
 {
     for (Vec3f rgb : {Vec3f{0.2f, 0.4f, 0.6f}, Vec3f{1, 0.5f, 0}, Vec3f{0.01f, 0.02f, 0.03f}, Vec3f{0.9f, 0.9f, 0.1f}})
-        for (WhitePoint wp : {WhitePoint::D65, WhitePoint::D50, WhitePoint::A})
+        for (WhitePoint whitePt : {WhitePoint::D65, WhitePoint::D50, WhitePoint::A})
         {
-            Vec3f back = core::labToSrgb(core::srgbToLab(rgb, wp), wp);
+            Vec3f back = core::labToSrgb(core::srgbToLab(rgb, whitePt), whitePt);
             CHECK(back.x == doctest::Approx(rgb.x).epsilon(1e-4));
             CHECK(back.y == doctest::Approx(rgb.y).epsilon(1e-4));
             CHECK(back.z == doctest::Approx(rgb.z).epsilon(1e-4));
@@ -54,8 +54,8 @@ TEST_CASE("Color: the white point normalises Lab")
 
 TEST_CASE("Color: transfer functions round trip")
 {
-    for (float v : {0.0f, 0.001f, 0.04045f, 0.2f, 0.5f, 1.0f})
-        CHECK(core::linearToSrgb(core::srgbToLinear(v)) == doctest::Approx(v).epsilon(1e-5));
+    for (float value : {0.0f, 0.001f, 0.04045f, 0.2f, 0.5f, 1.0f})
+        CHECK(core::linearToSrgb(core::srgbToLinear(value)) == doctest::Approx(value).epsilon(1e-5));
 }
 
 TEST_CASE("Color: image converters")

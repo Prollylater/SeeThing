@@ -7,9 +7,9 @@
 #include "doc/Selection.h"
 #include "ui/Shell.h"
 
-#include "ImgEditorEngine.h"
-#include "RegionGrowingEngine.h"
-#include "StructParam.h"
+#include "engine/ImgEditorEngine.h"
+#include "engine/RegionGrowingEngine.h"
+#include "engine/StructParam.h"
 
 #include <array>
 #include <functional>
@@ -50,11 +50,11 @@ public:
     void endStroke();
 
     // The pixel of the composite (what you see) or of the active layer
-    std::optional<std::array<std::uint8_t, 4>> pickColor(core::Vec2i p, bool composite);
+    std::optional<std::array<std::uint8_t, 4>> pickColor(core::Vec2i pixel, bool composite);
     // Both grow one region from p on the active layer, with the seeded growing's comparison.
     // The bucket stays inside the selection; the wand only when asked, so it can add regions outside it.
-    bool bucketFill(core::Vec2i p, float threshold, int compare, std::array<std::uint8_t, 4> rgba);
-    bool magicWand(core::Vec2i p, float threshold, int compare, doc::SelectMode mode, bool limitToSelection = false);
+    bool bucketFill(core::Vec2i pixel, float threshold, int compare, std::array<std::uint8_t, 4> rgba);
+    bool magicWand(core::Vec2i pixel, float threshold, int compare, doc::SelectMode mode, bool limitToSelection = false);
 
     // Both read the active layer, limited to the selection when there is one; seeded growing in Placed mode
     // starts from the document's seeds

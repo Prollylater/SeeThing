@@ -18,10 +18,10 @@ namespace doc
         Document() = default;
         Document(int width, int height);
 
-        bool empty() const { return m_w == 0; }
-        int width() const { return m_w; }
-        int height() const { return m_h; }
-        core::Recti bounds() const { return {0, 0, m_w, m_h}; }
+        bool empty() const { return m_width == 0; }
+        int width() const { return m_width; }
+        int height() const { return m_height; }
+        core::Recti bounds() const { return {0, 0, m_width, m_height}; }
         // Tells two documents apart even when they reuse layer ids
         std::uint64_t serial() const { return m_serial; }
         // Bumped by every change; the renderer recomposites when it moves
@@ -71,7 +71,7 @@ namespace doc
         Layer &layerById(LayerId id);
         void touch() { ++m_revision; }
 
-        int m_w = 0, m_h = 0;
+        int m_width = 0, m_height = 0;
         std::uint64_t m_serial = 0;
         std::uint64_t m_revision = 0;
         std::vector<Layer> m_layers;

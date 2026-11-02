@@ -26,12 +26,12 @@ namespace
         std::string file(const char *name) const { return (path / name).string(); }
     };
 
-    core::Image<std::uint8_t> pattern(int w, int h, int c)
+    core::Image<std::uint8_t> pattern(int width, int height, int channels)
     {
-        core::Image<std::uint8_t> img(w, h, c);
-        for (int y = 0; y < h; ++y)
-            for (int x = 0; x < w; ++x)
-                for (int k = 0; k < c; ++k)
+        core::Image<std::uint8_t> img(width, height, channels);
+        for (int y = 0; y < height; ++y)
+            for (int x = 0; x < width; ++x)
+                for (int k = 0; k < channels; ++k)
                     img(x, y, k) = std::uint8_t((x * 37 + y * 11 + k * 60) % 256);
         return img;
     }
@@ -47,16 +47,16 @@ namespace
 TEST_CASE("ImageIO: PNG round trip is lossless and keeps rows top-down")
 {
     TempDir dir;
-    for (int c : {1, 3, 4})
+    for (int channels : {1, 3, 4})
     {
-        core::Image<std::uint8_t> img = pattern(7, 5, c);
+        core::Image<std::uint8_t> img = pattern(7, 5, channels);
         std::string path = dir.file("round.png");
         std::string error;
         REQUIRE_MESSAGE(core::saveImage(path, img, &error), error);
 
         core::LoadResult loaded = core::loadImage(path, 0);
         REQUIRE_MESSAGE(loaded.ok(), loaded.error);
-        CHECK(loaded.fileChannels == c);
+        CHECK(loaded.fileChannels == channels);
         CHECK(samePixels(loaded.image, img));
     }
 }
@@ -117,10 +117,10 @@ TEST_CASE("ImageIO: failures return an error, never a half-built image")
 
     std::string notAnImage = dir.file("text.png");
     {
-        std::FILE *f = std::fopen(notAnImage.c_str(), "wb");
-        REQUIRE(f);
-        std::fputs("not an image", f);
-        std::fclose(f);
+        std::FILE *file = std::fopen(notAnImage.c_str(), "wb");
+        REQUIRE(file);
+        std::fputs("not an image", file);
+        std::fclose(file);
     }
     CHECK_FALSE(core::loadImage(notAnImage).ok());
     CHECK_FALSE(core::loadImage(notAnImage, 7).ok());

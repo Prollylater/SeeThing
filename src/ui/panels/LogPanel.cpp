@@ -9,9 +9,9 @@ namespace ui
 {
     namespace
     {
-        std::string clockTime(std::chrono::system_clock::time_point t)
+        std::string clockTime(std::chrono::system_clock::time_point time)
         {
-            const std::time_t seconds = std::chrono::system_clock::to_time_t(t);
+            const std::time_t seconds = std::chrono::system_clock::to_time_t(time);
             std::tm local{};
             localtime_r(&seconds, &local);
             char text[16];
@@ -39,9 +39,9 @@ namespace ui
             m_scrollToEnd = true;
         }
 
-        auto visible = [&](const core::LogEntry &e)
+        auto visible = [&](const core::LogEntry &entry)
         {
-            switch (e.level)
+            switch (entry.level)
             {
             case core::LogLevel::Info: return m_showInfo;
             case core::LogLevel::Warning: return m_showWarnings;
@@ -56,9 +56,9 @@ namespace ui
         if (ImGui::Button("Copy"))
         {
             std::string text;
-            for (const core::LogEntry &e : m_entries)
-                if (visible(e))
-                    text += clockTime(e.time) + "  " + e.text + "\n";
+            for (const core::LogEntry &entry : m_entries)
+                if (visible(entry))
+                    text += clockTime(entry.time) + "  " + entry.text + "\n";
             ImGui::SetClipboardText(text.c_str());
         }
         ImGui::SameLine();
@@ -74,16 +74,16 @@ namespace ui
             // Follow new lines only when already at the bottom, so reading older ones isn't interrupted
             const bool atEnd = ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 1.0f;
             const ImVec4 warnColor(0.95f, 0.75f, 0.30f, 1.0f), errorColor(1.0f, 0.45f, 0.40f, 1.0f);
-            for (const core::LogEntry &e : m_entries)
+            for (const core::LogEntry &entry : m_entries)
             {
-                if (!visible(e))
+                if (!visible(entry))
                     continue;
-                ImGui::TextDisabled("%s", clockTime(e.time).c_str());
+                ImGui::TextDisabled("%s", clockTime(entry.time).c_str());
                 ImGui::SameLine();
-                if (e.level == core::LogLevel::Info)
-                    ImGui::TextUnformatted(e.text.c_str());
+                if (entry.level == core::LogLevel::Info)
+                    ImGui::TextUnformatted(entry.text.c_str());
                 else
-                    ImGui::TextColored(e.level == core::LogLevel::Error ? errorColor : warnColor, "%s", e.text.c_str());
+                    ImGui::TextColored(entry.level == core::LogLevel::Error ? errorColor : warnColor, "%s", entry.text.c_str());
             }
             if (m_scrollToEnd && atEnd)
                 ImGui::SetScrollHereY(1.0f);

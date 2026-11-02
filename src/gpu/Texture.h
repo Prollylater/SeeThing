@@ -42,17 +42,17 @@ namespace gpu
         core::Image<float> downloadFloat() const;
 
         GLuint id() const { return m_tex.get(); }
-        int width() const { return m_w; }
-        int height() const { return m_h; }
+        int width() const { return m_width; }
+        int height() const { return m_height; }
         core::PixelFormat format() const { return m_format; }
         int channels() const;
         bool empty() const { return !m_tex; }
 
     private:
-        void uploadRaw(int x, int y, const void *px, int w, int h, int c, std::ptrdiff_t stride, GLenum type);
+        void uploadRaw(int x, int y, const void *px, int width, int height, int channels, std::ptrdiff_t stride, GLenum type);
 
         TextureHandle m_tex;
-        int m_w = 0, m_h = 0;
+        int m_width = 0, m_height = 0;
         core::PixelFormat m_format = core::PixelFormat::Unknown;
     };
 }

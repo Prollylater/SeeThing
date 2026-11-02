@@ -15,26 +15,26 @@ namespace core
     {
     public:
         // The first dab sits on p
-        void begin(Vec2f p, std::vector<Vec2f> &out)
+        void begin(Vec2f start, std::vector<Vec2f> &out)
         {
-            m_last = p;
+            m_last = start;
             m_travelled = 0.0f;
-            out.push_back(p);
+            out.push_back(start);
         }
 
-        void moveTo(Vec2f p, float spacing, std::vector<Vec2f> &out)
+        void moveTo(Vec2f to, float spacing, std::vector<Vec2f> &out)
         {
             spacing = std::max(spacing, 0.1f);
-            const Vec2f d = p - m_last;
-            const float len = std::hypot(d.x, d.y);
+            const Vec2f delta = to - m_last;
+            const float len = std::hypot(delta.x, delta.y);
             if (len <= 0.0f)
                 return;
             // Distance along this segment to the next dab
-            float t = spacing - m_travelled;
-            for (; t <= len; t += spacing)
-                out.push_back(m_last + d * (t / len));
-            m_travelled = len - (t - spacing);
-            m_last = p;
+            float along = spacing - m_travelled;
+            for (; along <= len; along += spacing)
+                out.push_back(m_last + delta * (along / len));
+            m_travelled = len - (along - spacing);
+            m_last = to;
         }
 
     private:

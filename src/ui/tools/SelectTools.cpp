@@ -22,7 +22,7 @@ namespace ui
     namespace
     {
         ImVec2 im(core::Vec2f v) { return {v.x, v.y}; }
-        core::Vec2i pixelAt(core::Vec2f p) { return {int(std::floor(p.x)), int(std::floor(p.y))}; }
+        core::Vec2i pixelAt(core::Vec2f point) { return {int(std::floor(point.x)), int(std::floor(point.y))}; }
 
         // The option row's mode, unless Shift (add), Alt (subtract) or both (intersect) are held at the press
         struct ModeChoice
@@ -32,35 +32,35 @@ namespace ui
             void draw()
             {
                 const doc::SelectMode modes[] = {doc::SelectMode::Replace, doc::SelectMode::Add, doc::SelectMode::Subtract, doc::SelectMode::Intersect};
-                for (doc::SelectMode m : modes)
+                for (doc::SelectMode mode : modes)
                 {
                     ImGui::SameLine();
-                    if (ImGui::RadioButton(doc::selectModeName(m), option == m))
-                        option = m;
+                    if (ImGui::RadioButton(doc::selectModeName(mode), option == mode))
+                        option = mode;
                 }
                 ImGui::SameLine();
                 ImGui::TextDisabled("(?)");
                 ImGui::SetItemTooltip("Hold Shift to add, Alt to subtract, both to intersect");
             }
 
-            doc::SelectMode at(const ToolEvent &e) const
+            doc::SelectMode at(const ToolEvent &event) const
             {
-                if (e.shift && e.alt)
+                if (event.shift && event.alt)
                     return doc::SelectMode::Intersect;
-                if (e.shift)
+                if (event.shift)
                     return doc::SelectMode::Add;
-                if (e.alt)
+                if (event.alt)
                     return doc::SelectMode::Subtract;
                 return option;
             }
         };
 
         // Dark under light: readable on any image
-        void outline(ImDrawList *dl, const std::vector<ImVec2> &points, bool closed)
+        void outline(ImDrawList *drawList, const std::vector<ImVec2> &points, bool closed)
         {
             const ImDrawFlags flags = closed ? ImDrawFlags_Closed : ImDrawFlags_None;
-            dl->AddPolyline(points.data(), int(points.size()), IM_COL32(0, 0, 0, 200), 3.0f, flags);
-            dl->AddPolyline(points.data(), int(points.size()), IM_COL32(255, 255, 255, 230), 1.0f, flags);
+            drawList->AddPolyline(points.data(), int(points.size()), IM_COL32(0, 0, 0, 200), 3.0f, flags);
+            drawList->AddPolyline(points.data(), int(points.size()), IM_COL32(255, 255, 255, 230), 1.0f, flags);
         }
     }
 
@@ -110,26 +110,26 @@ namespace ui
             m_mode.draw();
         }
 
-        void press(ToolContext &, const ToolEvent &e) override
+        void press(ToolContext &, const ToolEvent &event) override
         {
             m_dragging = true;
-            m_modeNow = m_mode.at(e);
-            m_from = m_to = e.pos;
-            m_points = {e.pos};
+            m_modeNow = m_mode.at(event);
+            m_from = m_to = event.pos;
+            m_points = {event.pos};
         }
 
-        void drag(ToolContext &, const ToolEvent &e) override
+        void drag(ToolContext &, const ToolEvent &event) override
         {
-            m_to = e.pos;
+            m_to = event.pos;
             // A lasso point every 2 screen pixels is plenty
-            const core::Vec2f d = e.pos - m_points.back();
-            if (std::hypot(d.x, d.y) * e.zoom >= 2.0f)
-                m_points.push_back(e.pos);
+            const core::Vec2f delta = event.pos - m_points.back();
+            if (std::hypot(delta.x, delta.y) * event.zoom >= 2.0f)
+                m_points.push_back(event.pos);
         }
 
-        void release(ToolContext &ctx, const ToolEvent &e) override
+        void release(ToolContext &ctx, const ToolEvent &event) override
         {
-            drag(ctx, e);
+            drag(ctx, event);
             m_dragging = false;
             doc::Document &doc = ctx.app.document();
             std::optional<doc::Shape> shape;
@@ -157,37 +157,37 @@ namespace ui
             m_points.clear();
         }
 
-        void overlay(ImDrawList *dl, const CanvasView &view, const CanvasInput &canvas) const override
+        void overlay(ImDrawList *drawList, const CanvasView &view, const CanvasInput &canvas) const override
         {
             if (!m_dragging)
                 return;
             std::vector<ImVec2> points;
             if (m_shape == Shape::Lasso)
             {
-                for (core::Vec2f p : m_points)
-                    points.push_back(im(view.toScreen(p, canvas.origin)));
+                for (core::Vec2f point : m_points)
+                    points.push_back(im(view.toScreen(point, canvas.origin)));
                 if (points.size() >= 2)
-                    outline(dl, points, true);
+                    outline(drawList, points, true);
                 return;
             }
-            const core::Recti r = rect();
-            const core::Vec2f a = view.toScreen({float(r.x), float(r.y)}, canvas.origin);
-            const core::Vec2f b = view.toScreen({float(r.right()), float(r.bottom())}, canvas.origin);
+            const core::Recti box = rect();
+            const core::Vec2f topLeft = view.toScreen({float(box.x), float(box.y)}, canvas.origin);
+            const core::Vec2f bottomRight = view.toScreen({float(box.right()), float(box.bottom())}, canvas.origin);
             if (m_shape == Shape::Ellipse)
             {
-                const ImVec2 c{(a.x + b.x) * 0.5f, (a.y + b.y) * 0.5f};
-                const float rx = (b.x - a.x) * 0.5f, ry = (b.y - a.y) * 0.5f;
+                const ImVec2 center{(topLeft.x + bottomRight.x) * 0.5f, (topLeft.y + bottomRight.y) * 0.5f};
+                const float rx = (bottomRight.x - topLeft.x) * 0.5f, ry = (bottomRight.y - topLeft.y) * 0.5f; // ellipse radii
                 for (int i = 0; i < 64; ++i)
                 {
-                    const float t = 6.2831853f * float(i) / 64.0f;
-                    points.push_back({c.x + rx * std::cos(t), c.y + ry * std::sin(t)});
+                    const float angle = 6.2831853f * float(i) / 64.0f;
+                    points.push_back({center.x + rx * std::cos(angle), center.y + ry * std::sin(angle)});
                 }
             }
             else
             {
-                points = {im(a), {b.x, a.y}, im(b), {a.x, b.y}};
+                points = {im(topLeft), {bottomRight.x, topLeft.y}, im(bottomRight), {topLeft.x, bottomRight.y}};
             }
-            outline(dl, points, true);
+            outline(drawList, points, true);
         }
 
     private:
@@ -229,9 +229,9 @@ namespace ui
             m_mode.draw();
         }
 
-        void press(ToolContext &ctx, const ToolEvent &e) override
+        void press(ToolContext &ctx, const ToolEvent &event) override
         {
-            ctx.app.magicWand(pixelAt(e.pos), m_threshold, m_compare, m_mode.at(e), m_limit);
+            ctx.app.magicWand(pixelAt(event.pos), m_threshold, m_compare, m_mode.at(event), m_limit);
         }
 
     private:
@@ -260,13 +260,13 @@ namespace ui
             ImGui::EndDisabled();
         }
 
-        void press(ToolContext &ctx, const ToolEvent &e) override
+        void press(ToolContext &ctx, const ToolEvent &event) override
         {
             doc::Document &doc = ctx.app.document();
-            if (e.alt)
-                doc::removeSeedNear(doc, e.pos, 8.0f / e.zoom); // 8 screen pixels
+            if (event.alt)
+                doc::removeSeedNear(doc, event.pos, 8.0f / event.zoom); // 8 screen pixels
             else
-                doc::addSeed(doc, pixelAt(e.pos));
+                doc::addSeed(doc, pixelAt(event.pos));
         }
     };
 

@@ -66,8 +66,8 @@ namespace core
     inline Recti intersect(Recti a, Recti b)
     {
         const int x = std::max(a.x, b.x), y = std::max(a.y, b.y);
-        const int r = std::min(a.right(), b.right()), bt = std::min(a.bottom(), b.bottom());
-        return r > x && bt > y ? Recti{x, y, r - x, bt - y} : Recti{};
+        const int right = std::min(a.right(), b.right()), bottom = std::min(a.bottom(), b.bottom());
+        return right > x && bottom > y ? Recti{x, y, right - x, bottom - y} : Recti{};
     }
 
     // Row-major: m[row][col]
@@ -85,11 +85,11 @@ namespace core
         }
         friend Mat3f operator*(const Mat3f &a, const Mat3f &b)
         {
-            Mat3f r;
+            Mat3f result;
             for (int i = 0; i < 3; ++i)
                 for (int j = 0; j < 3; ++j)
-                    r.m[i][j] = a.m[i][0] * b.m[0][j] + a.m[i][1] * b.m[1][j] + a.m[i][2] * b.m[2][j];
-            return r;
+                    result.m[i][j] = a.m[i][0] * b.m[0][j] + a.m[i][1] * b.m[1][j] + a.m[i][2] * b.m[2][j];
+            return result;
         }
 
         float determinant() const
@@ -106,17 +106,17 @@ namespace core
             if (std::fabs(det) < 1e-12f)
                 return std::nullopt;
             float inv = 1.0f / det;
-            Mat3f r;
-            r.m[0][0] = (m[1][1] * m[2][2] - m[1][2] * m[2][1]) * inv;
-            r.m[0][1] = (m[0][2] * m[2][1] - m[0][1] * m[2][2]) * inv;
-            r.m[0][2] = (m[0][1] * m[1][2] - m[0][2] * m[1][1]) * inv;
-            r.m[1][0] = (m[1][2] * m[2][0] - m[1][0] * m[2][2]) * inv;
-            r.m[1][1] = (m[0][0] * m[2][2] - m[0][2] * m[2][0]) * inv;
-            r.m[1][2] = (m[0][2] * m[1][0] - m[0][0] * m[1][2]) * inv;
-            r.m[2][0] = (m[1][0] * m[2][1] - m[1][1] * m[2][0]) * inv;
-            r.m[2][1] = (m[0][1] * m[2][0] - m[0][0] * m[2][1]) * inv;
-            r.m[2][2] = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) * inv;
-            return r;
+            Mat3f result;
+            result.m[0][0] = (m[1][1] * m[2][2] - m[1][2] * m[2][1]) * inv;
+            result.m[0][1] = (m[0][2] * m[2][1] - m[0][1] * m[2][2]) * inv;
+            result.m[0][2] = (m[0][1] * m[1][2] - m[0][2] * m[1][1]) * inv;
+            result.m[1][0] = (m[1][2] * m[2][0] - m[1][0] * m[2][2]) * inv;
+            result.m[1][1] = (m[0][0] * m[2][2] - m[0][2] * m[2][0]) * inv;
+            result.m[1][2] = (m[0][2] * m[1][0] - m[0][0] * m[1][2]) * inv;
+            result.m[2][0] = (m[1][0] * m[2][1] - m[1][1] * m[2][0]) * inv;
+            result.m[2][1] = (m[0][1] * m[2][0] - m[0][0] * m[2][1]) * inv;
+            result.m[2][2] = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) * inv;
+            return result;
         }
     };
 }

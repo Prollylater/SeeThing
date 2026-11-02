@@ -18,13 +18,13 @@ namespace gpu
         void bind() const;
 
         GLuint id() const { return m_fbo.get(); }
-        int width() const { return m_w; }
-        int height() const { return m_h; }
+        int width() const { return m_width; }
+        int height() const { return m_height; }
         bool empty() const { return !m_fbo; }
 
     private:
         FramebufferHandle m_fbo;
-        int m_w = 0, m_h = 0;
+        int m_width = 0, m_height = 0;
     };
 }
 

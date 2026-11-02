@@ -1,6 +1,6 @@
 #include "Shell.h"
 
-#include "AssetPath.h"
+#include "utils/AssetPath.h"
 #include "IconsCodicons.h"
 #include "app/App.h"
 #include "app/Platform.h"
@@ -171,12 +171,12 @@ namespace ui
         }
         if (ImGui::BeginMenu("Edit"))
         {
-            const doc::History *h = hasImage ? &m_app.document().history() : nullptr;
-            const std::string undo = h && h->canUndo() ? "Undo " + h->step(h->cursor() - 1).label() : "Undo";
-            const std::string redo = h && h->canRedo() ? "Redo " + h->step(h->cursor()).label() : "Redo";
-            if (ImGui::MenuItem(undo.c_str(), "Ctrl+Z", false, h && h->canUndo()))
+            const doc::History *history = hasImage ? &m_app.document().history() : nullptr;
+            const std::string undo = history && history->canUndo() ? "Undo " + history->step(history->cursor() - 1).label() : "Undo";
+            const std::string redo = history && history->canRedo() ? "Redo " + history->step(history->cursor()).label() : "Redo";
+            if (ImGui::MenuItem(undo.c_str(), "Ctrl+Z", false, history && history->canUndo()))
                 m_app.undo();
-            if (ImGui::MenuItem(redo.c_str(), "Ctrl+Shift+Z", false, h && h->canRedo()))
+            if (ImGui::MenuItem(redo.c_str(), "Ctrl+Shift+Z", false, history && history->canRedo()))
                 m_app.redo();
             ImGui::Separator();
             if (ImGui::MenuItem("Select All", "Ctrl+A", false, hasImage))

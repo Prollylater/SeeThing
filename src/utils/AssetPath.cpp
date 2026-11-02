@@ -21,9 +21,9 @@ static fs::path executableDir()
     }
     return fs::path(std::wstring(buffer, length)).parent_path();
 #elif defined(__linux__)
-    std::error_code ec;
-    fs::path exe = fs::read_symlink("/proc/self/exe", ec);
-    return ec ? fs::path() : exe.parent_path();
+    std::error_code errC;
+    fs::path exe = fs::read_symlink("/proc/self/exe", errC);
+    return errC ? fs::path() : exe.parent_path();
 #else
     return {};
 #endif
@@ -37,8 +37,8 @@ static fs::path assetRoot()
         return env;
     }
     fs::path dir = executableDir();
-    std::error_code ec;
-    if (!dir.empty() && fs::is_directory(dir / "ressources", ec))
+    std::error_code errC;
+    if (!dir.empty() && fs::is_directory(dir / "ressources", errC))
     {
         return dir / "ressources";
     }

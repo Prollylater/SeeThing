@@ -69,11 +69,11 @@ namespace gpu
         {
             program.m_prog = ProgramHandle::create();
             const GLuint id = program.m_prog.get();
-            for (const ShaderHandle &s : shaders)
-                glAttachShader(id, s.get());
+            for (const ShaderHandle &shader : shaders)
+                glAttachShader(id, shader.get());
             glLinkProgram(id);
-            for (const ShaderHandle &s : shaders)
-                glDetachShader(id, s.get());
+            for (const ShaderHandle &shader : shaders)
+                glDetachShader(id, shader.get());
             GLint linked = GL_FALSE;
             glGetProgramiv(id, GL_LINK_STATUS, &linked);
             if (!linked)
@@ -87,8 +87,8 @@ namespace gpu
         return program;
     }
 
-    void Program::set(const char *name, int v) const { glProgramUniform1i(m_prog.get(), location(name), v); }
-    void Program::set(const char *name, float v) const { glProgramUniform1f(m_prog.get(), location(name), v); }
-    void Program::set(const char *name, core::Vec2f v) const { glProgramUniform2f(m_prog.get(), location(name), v.x, v.y); }
-    void Program::set(const char *name, core::Vec3f v) const { glProgramUniform3f(m_prog.get(), location(name), v.x, v.y, v.z); }
+    void Program::set(const char *name, int value) const { glProgramUniform1i(m_prog.get(), location(name), value); }
+    void Program::set(const char *name, float value) const { glProgramUniform1f(m_prog.get(), location(name), value); }
+    void Program::set(const char *name, core::Vec2f value) const { glProgramUniform2f(m_prog.get(), location(name), value.x, value.y); }
+    void Program::set(const char *name, core::Vec3f value) const { glProgramUniform3f(m_prog.get(), location(name), value.x, value.y, value.z); }
 }

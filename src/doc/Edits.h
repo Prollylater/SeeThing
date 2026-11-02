@@ -51,9 +51,9 @@ namespace doc
     bool fillMask(Document &doc, LayerId id, const core::Image<std::uint8_t> &mask, core::Recti bounds,
                   std::array<std::uint8_t, 4> rgba, std::string label);
 
-    void addSeed(Document &doc, core::Vec2i p);
+    void addSeed(Document &doc, core::Vec2i pixel);
     // The seed nearest to p within radius pixels; false when there is none
-    bool removeSeedNear(Document &doc, core::Vec2f p, float radius);
+    bool removeSeedNear(Document &doc, core::Vec2f point, float radius);
     void clearSeeds(Document &doc);
 
     bool selectAll(Document &doc);

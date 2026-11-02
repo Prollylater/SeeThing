@@ -24,12 +24,12 @@ using core::PixelFormat;
 
 namespace
 {
-    Image<std::uint8_t> pattern(int w, int h, int c)
+    Image<std::uint8_t> pattern(int width, int height, int channels)
     {
-        Image<std::uint8_t> img(w, h, c);
-        for (int y = 0; y < h; ++y)
-            for (int x = 0; x < w; ++x)
-                for (int k = 0; k < c; ++k)
+        Image<std::uint8_t> img(width, height, channels);
+        for (int y = 0; y < height; ++y)
+            for (int x = 0; x < width; ++x)
+                for (int k = 0; k < channels; ++k)
                     img(x, y, k) = std::uint8_t((x * 37 + y * 11 + k * 60 + 1) % 256);
         return img;
     }
@@ -44,9 +44,9 @@ namespace
         return true;
     }
 
-    gpu::Texture blankRGBA(int w, int h)
+    gpu::Texture blankRGBA(int width, int height)
     {
-        return gpu::Texture::fromImage<std::uint8_t>(Image<std::uint8_t>(w, h, 4));
+        return gpu::Texture::fromImage<std::uint8_t>(Image<std::uint8_t>(width, height, 4));
     }
 
     const char *vertexCode = "#version 450 core\nvoid main() { gl_Position = vec4(0.0, 0.0, 0.0, 1.0); }\n";
@@ -62,16 +62,16 @@ TEST_CASE("GlHandle: owns one name, moves it, deletes it")
 {
     GLuint id = 0;
     {
-        gpu::BufferHandle a = gpu::BufferHandle::create();
-        id = a.get();
+        gpu::BufferHandle handle = gpu::BufferHandle::create();
+        id = handle.get();
         REQUIRE(id != 0);
         CHECK(glIsBuffer(id));
-        gpu::BufferHandle b = std::move(a);
-        CHECK(a.get() == 0);
-        CHECK(b.get() == id);
-        gpu::BufferHandle c;
-        c = std::move(b);
-        CHECK(c.get() == id);
+        gpu::BufferHandle moved = std::move(handle);
+        CHECK(handle.get() == 0);
+        CHECK(moved.get() == id);
+        gpu::BufferHandle assigned;
+        assigned = std::move(moved);
+        CHECK(assigned.get() == id);
     }
     CHECK_FALSE(glIsBuffer(id));
 }
@@ -79,17 +79,17 @@ TEST_CASE("GlHandle: owns one name, moves it, deletes it")
 TEST_CASE("Texture: round trip keeps every pixel at any width and channel count")
 {
     // Odd widths break the default 4-byte row alignment
-    for (int c : {1, 2, 3, 4})
-        for (int w : {1, 5, 7, 13})
+    for (int channels : {1, 2, 3, 4})
+        for (int width : {1, 5, 7, 13})
         {
-            CAPTURE(c);
-            CAPTURE(w);
-            Image<std::uint8_t> img = pattern(w, 3, c);
+            CAPTURE(channels);
+            CAPTURE(width);
+            Image<std::uint8_t> img = pattern(width, 3, channels);
             gpu::Texture tex = gpu::Texture::fromImage<std::uint8_t>(img);
-            CHECK(tex.width() == w);
+            CHECK(tex.width() == width);
             CHECK(tex.height() == 3);
-            CHECK(tex.channels() == c);
-            CHECK(tex.format() == core::pixelFormatOf<std::uint8_t>(c));
+            CHECK(tex.channels() == channels);
+            CHECK(tex.format() == core::pixelFormatOf<std::uint8_t>(channels));
             CHECK(samePixels(tex.download8(), img));
         }
 }
@@ -112,11 +112,11 @@ TEST_CASE("Texture: mismatched uploads and bad sizes throw")
     CHECK(gpu::Texture().empty());
     CHECK(gpu::Texture().download8().empty());
 
-    gpu::Texture f(3, 2, PixelFormat::R32F);
+    gpu::Texture floatTexture(3, 2, PixelFormat::R32F);
     Image<float> values(3, 2, 1);
     values.fill(0.25f);
-    CHECK_NOTHROW(f.upload(values));
-    CHECK_THROWS_AS(f.download8(), std::logic_error);
+    CHECK_NOTHROW(floatTexture.upload(values));
+    CHECK_THROWS_AS(floatTexture.download8(), std::logic_error);
 }
 
 TEST_CASE("Renderer: blit copies row 0 to row 0 and shows gray as gray")
@@ -239,8 +239,8 @@ namespace
 TEST_CASE("Renderer: composite matches the W3C formulas in every mode")
 {
     gpu::Renderer renderer(SEETHING_SHADER_DIR);
-    const int w = 16, h = 16;
-    Image<std::uint8_t> back(w, h, 4), src(w, h, 4);
+    const int width = 16, height = 16;
+    Image<std::uint8_t> back(width, height, 4), src(width, height, 4);
     std::mt19937 rng(3);
     for (std::size_t i = 0; i < back.size(); ++i)
     {
@@ -248,14 +248,14 @@ TEST_CASE("Renderer: composite matches the W3C formulas in every mode")
         src.data()[i] = std::uint8_t(rng());
     }
     // Opaque and fully transparent pixels too
-    for (int x = 0; x < w; ++x)
+    for (int x = 0; x < width; ++x)
     {
         back(x, 0, 3) = 255;
         src(x, 1, 3) = 0;
         back(x, 2, 3) = 0;
     }
     gpu::Texture backTex = gpu::Texture::fromImage<std::uint8_t>(back), srcTex = gpu::Texture::fromImage<std::uint8_t>(src);
-    gpu::Texture dst = blankRGBA(w, h);
+    gpu::Texture dst = blankRGBA(width, height);
     gpu::Framebuffer fbo(dst);
 
     for (core::BlendMode mode : core::blendModes)
@@ -266,8 +266,8 @@ TEST_CASE("Renderer: composite matches the W3C formulas in every mode")
             renderer.composite(backTex, srcTex, opacity, mode, fbo);
             const Image<std::uint8_t> out = dst.download8();
             int worst = 0;
-            for (int y = 0; y < h; ++y)
-                for (int x = 0; x < w; ++x)
+            for (int y = 0; y < height; ++y)
+                for (int x = 0; x < width; ++x)
                 {
                     std::array<float, 4> b, s;
                     for (int k = 0; k < 4; ++k)
@@ -292,7 +292,7 @@ TEST_CASE("Renderer: clear fills the target")
     gpu::Framebuffer fbo(dst);
     renderer.clear(fbo);
     const Image<std::uint8_t> out = dst.download8();
-    CHECK(std::all_of(out.data(), out.data() + out.size(), [](std::uint8_t v) { return v == 0; }));
+    CHECK(std::all_of(out.data(), out.data() + out.size(), [](std::uint8_t value) { return value == 0; }));
 }
 
 TEST_CASE("Renderer: points respect a clip mask")
@@ -323,8 +323,8 @@ TEST_CASE("Renderer: a hard dab covers its disc, a soft one fades out")
     gpu::Texture cov(40, 40, PixelFormat::R32F);
     gpu::Framebuffer fbo(cov);
     renderer.clear(fbo);
-    const core::Vec2f centre[] = {{20, 20}};
-    renderer.drawDabs(fbo, centre, 20.0f, 1.0f, 1.0f);
+    const core::Vec2f center[] = {{20, 20}};
+    renderer.drawDabs(fbo, center, 20.0f, 1.0f, 1.0f);
     Image<float> out = cov.downloadFloat();
     double area = 0;
     for (std::size_t i = 0; i < out.size(); ++i)
@@ -336,7 +336,7 @@ TEST_CASE("Renderer: a hard dab covers its disc, a soft one fades out")
     CHECK(out(15, 20) == doctest::Approx(out(24, 20))); // symmetric about x = 20
 
     renderer.clear(fbo);
-    renderer.drawDabs(fbo, centre, 20.0f, 0.0f, 1.0f);
+    renderer.drawDabs(fbo, center, 20.0f, 0.0f, 1.0f);
     out = cov.downloadFloat();
     CHECK(out(20, 20) > 0.95f);
     CHECK(out(20, 24) < out(20, 22));
@@ -349,20 +349,20 @@ TEST_CASE("Renderer: flow builds up over repeated dabs and never passes 1")
     gpu::Texture cov(8, 8, PixelFormat::R32F);
     gpu::Framebuffer fbo(cov);
     renderer.clear(fbo);
-    const core::Vec2f centre[] = {{4, 4}};
-    renderer.drawDabs(fbo, centre, 6.0f, 1.0f, 0.5f);
+    const core::Vec2f center[] = {{4, 4}};
+    renderer.drawDabs(fbo, center, 6.0f, 1.0f, 0.5f);
     CHECK(cov.downloadFloat()(3, 3) == doctest::Approx(0.5f));
-    renderer.drawDabs(fbo, centre, 6.0f, 1.0f, 0.5f);
+    renderer.drawDabs(fbo, center, 6.0f, 1.0f, 0.5f);
     CHECK(cov.downloadFloat()(3, 3) == doctest::Approx(0.75f)); // 0.5 + 0.5 * (1 - 0.5)
     for (int i = 0; i < 30; ++i)
-        renderer.drawDabs(fbo, centre, 6.0f, 1.0f, 0.5f);
+        renderer.drawDabs(fbo, center, 6.0f, 1.0f, 0.5f);
     const float many = cov.downloadFloat()(3, 3);
     CHECK(many <= 1.0f);
     CHECK(many > 0.999f);
     // Low flow still adds up in float
     renderer.clear(fbo);
     for (int i = 0; i < 100; ++i)
-        renderer.drawDabs(fbo, centre, 6.0f, 1.0f, 0.01f);
+        renderer.drawDabs(fbo, center, 6.0f, 1.0f, 0.01f);
     CHECK(cov.downloadFloat()(3, 3) == doctest::Approx(1.0 - std::pow(0.99, 100)).epsilon(0.01));
 }
 

@@ -31,8 +31,8 @@ TEST_CASE("DabSpacer: a long jump in one frame is filled, not dotted")
     CHECK(dabs.size() == 251);
     for (std::size_t i = 1; i < dabs.size(); ++i)
     {
-        const Vec2f d = dabs[i] - dabs[i - 1];
-        CHECK(std::hypot(d.x, d.y) == doctest::Approx(2.0f).epsilon(1e-3));
+        const Vec2f step = dabs[i] - dabs[i - 1];
+        CHECK(std::hypot(step.x, step.y) == doctest::Approx(2.0f).epsilon(1e-3));
     }
 }
 

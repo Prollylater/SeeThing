@@ -26,45 +26,45 @@ namespace ui
             return;
         }
 
-        const doc::History &h = app.document().history();
-        ImGui::BeginDisabled(!h.canUndo());
+        const doc::History &history = app.document().history();
+        ImGui::BeginDisabled(!history.canUndo());
         if (ImGui::Button(ICON_CI_DISCARD " Undo"))
             app.undo();
         ImGui::EndDisabled();
         ImGui::SameLine();
-        ImGui::BeginDisabled(!h.canRedo());
+        ImGui::BeginDisabled(!history.canRedo());
         if (ImGui::Button(ICON_CI_REDO " Redo"))
             app.redo();
         ImGui::EndDisabled();
         ImGui::SameLine();
-        ImGui::TextDisabled("%.1f of %.0f MB", double(h.bytes()) / (1 << 20), double(h.budget()) / (1 << 20));
+        ImGui::TextDisabled("%.1f of %.0f MB", double(history.bytes()) / (1 << 20), double(history.budget()) / (1 << 20));
         ImGui::SetItemTooltip("Memory the steps keep; past the budget the oldest are dropped");
         ImGui::Separator();
 
         if (ImGui::BeginChild("##steps"))
         {
             // Follow the current step when it moves
-            const bool moved = h.size() != m_seenSize || h.cursor() != m_seenCursor;
-            m_seenSize = h.size();
-            m_seenCursor = h.cursor();
+            const bool moved = history.size() != m_seenSize || history.cursor() != m_seenCursor;
+            m_seenSize = history.size();
+            m_seenCursor = history.cursor();
 
-            const std::string first = h.dropped() > 0 ? "Oldest kept state (" + std::to_string(h.dropped()) + " steps dropped)"
+            const std::string first = history.dropped() > 0 ? "Oldest kept state (" + std::to_string(history.dropped()) + " steps dropped)"
                                                       : "Open " + std::filesystem::path(app.imagePath()).filename().string();
-            if (ImGui::Selectable(first.c_str(), h.cursor() == 0))
+            if (ImGui::Selectable(first.c_str(), history.cursor() == 0))
                 app.jumpTo(0);
-            if (moved && h.cursor() == 0)
+            if (moved && history.cursor() == 0)
                 ImGui::SetScrollHereY();
-            for (std::size_t i = 0; i < h.size(); ++i)
+            for (std::size_t i = 0; i < history.size(); ++i)
             {
                 ImGui::PushID(int(i));
-                const bool undone = i >= h.cursor();
+                const bool undone = i >= history.cursor();
                 if (undone)
                     ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-                if (ImGui::Selectable(h.step(i).label().c_str(), h.cursor() == i + 1))
+                if (ImGui::Selectable(history.step(i).label().c_str(), history.cursor() == i + 1))
                     app.jumpTo(i + 1);
                 if (undone)
                     ImGui::PopStyleColor();
-                if (moved && h.cursor() == i + 1)
+                if (moved && history.cursor() == i + 1)
                     ImGui::SetScrollHereY();
                 ImGui::PopID();
             }

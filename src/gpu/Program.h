@@ -27,10 +27,10 @@ namespace gpu
         bool empty() const { return !m_prog; }
 
         // No bind needed; a name the linker dropped is ignored, as GL does
-        void set(const char *name, int v) const;
-        void set(const char *name, float v) const;
-        void set(const char *name, core::Vec2f v) const;
-        void set(const char *name, core::Vec3f v) const;
+        void set(const char *name, int value) const;
+        void set(const char *name, float value) const;
+        void set(const char *name, core::Vec2f value) const;
+        void set(const char *name, core::Vec3f value) const;
 
     private:
         GLint location(const char *name) const { return glGetUniformLocation(m_prog.get(), name); }

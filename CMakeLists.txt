@@ -12,8 +12,7 @@ option(SEETHING_BUILD_TESTS "Build the unit tests (downloads doctest)" ON)
 
 
 # Project directories
-set(SOURCE_DIR  src)
-set(INCLUDE_DIR includes)
+set(SOURCE_DIR src)
 
 
 # Dear ImGui, built apart so the project's warning flags don't apply to it
@@ -55,7 +54,7 @@ add_library(seething_core STATIC
 )
 target_compile_features(seething_core PUBLIC cxx_std_20)
 target_include_directories(seething_core PUBLIC ${SOURCE_DIR})
-target_include_directories(seething_core SYSTEM PRIVATE ${INCLUDE_DIR}/3rdParty)
+target_include_directories(seething_core SYSTEM PRIVATE third_party/stb)
 target_link_libraries(seething_core PRIVATE seething_warnings)
 
 
@@ -95,26 +94,17 @@ set(PROJECT_SRC
     ${SOURCE_DIR}/ui/panels/SegmentationPanel.cpp
     ${SOURCE_DIR}/ui/tools/PaintTools.cpp
     ${SOURCE_DIR}/ui/tools/SelectTools.cpp
-    ${SOURCE_DIR}/ImgEditorEngine/ImgEditorEngine.cpp
-    ${SOURCE_DIR}/ImgEditorEngine/RegionFill.cpp
-    ${SOURCE_DIR}/ImgEditorEngine/RegionGrowingAlg.cpp
-    ${SOURCE_DIR}/ImgEditorEngine/Regions.cpp
-    ${SOURCE_DIR}/Utils/AssetPath.cpp
-    ${SOURCE_DIR}/Utils/Mat.cpp
-    ${SOURCE_DIR}/Utils/Helper.cpp
+    ${SOURCE_DIR}/engine/ImgEditorEngine.cpp
+    ${SOURCE_DIR}/engine/RegionFill.cpp
+    ${SOURCE_DIR}/engine/RegionGrowingAlg.cpp
+    ${SOURCE_DIR}/engine/Regions.cpp
+    ${SOURCE_DIR}/utils/AssetPath.cpp
+    ${SOURCE_DIR}/utils/Mat.cpp
+    ${SOURCE_DIR}/utils/Helper.cpp
 )
-
-set(INCLUDES_DIRS
-    ${INCLUDE_DIR}
-    ${INCLUDE_DIR}/ImgEditorEngine
-    ${INCLUDE_DIR}/Utils
-)
-
 
 add_executable(seething ${PROJECT_SRC})
 target_compile_features(seething PRIVATE cxx_std_20)
-target_include_directories(seething PRIVATE ${INCLUDES_DIRS})
-target_include_directories(seething SYSTEM PRIVATE ${INCLUDE_DIR}/3rdParty)
 target_link_libraries(seething PRIVATE seething_core seething_doc seething_gpu imgui glad glfw seething_warnings)
 
 if(OpenMP_CXX_FOUND)

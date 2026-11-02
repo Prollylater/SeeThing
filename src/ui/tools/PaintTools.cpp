@@ -13,7 +13,7 @@ namespace ui
 {
     namespace
     {
-        core::Vec2i pixelAt(core::Vec2f p) { return {int(std::floor(p.x)), int(std::floor(p.y))}; }
+        core::Vec2i pixelAt(core::Vec2f point) { return {int(std::floor(point.x)), int(std::floor(point.y))}; }
 
         void colorOption(ToolShared &shared)
         {
@@ -60,26 +60,26 @@ namespace ui
             ImGui::SliderInt("Size", &m_size, 1, 32, "%d px");
         }
 
-        void press(ToolContext &ctx, const ToolEvent &e) override
+        void press(ToolContext &ctx, const ToolEvent &event) override
         {
             m_active = ctx.app.beginStroke();
-            m_last = snapped(e.pos);
+            m_last = snapped(event.pos);
             if (m_active)
                 paint(ctx, std::vector<core::Vec2f>{m_last});
         }
 
-        void drag(ToolContext &ctx, const ToolEvent &e) override
+        void drag(ToolContext &ctx, const ToolEvent &event) override
         {
             if (!m_active)
                 return;
-            const core::Vec2f pos = snapped(e.pos);
+            const core::Vec2f pos = snapped(event.pos);
             const core::Vec2f delta = pos - m_last;
             const int steps = int(std::max(std::fabs(delta.x), std::fabs(delta.y)));
             std::vector<core::Vec2f> points;
             for (int i = 1; i <= steps; ++i)
             {
-                const core::Vec2f p = m_last + delta * (float(i) / steps);
-                points.push_back({std::round(p.x), std::round(p.y)});
+                const core::Vec2f point = m_last + delta * (float(i) / steps);
+                points.push_back({std::round(point.x), std::round(point.y)});
             }
             m_last = pos;
             paint(ctx, points);
@@ -93,25 +93,25 @@ namespace ui
             m_active = false;
         }
 
-        void overlay(ImDrawList *dl, const CanvasView &view, const CanvasInput &canvas) const override
+        void overlay(ImDrawList *drawList, const CanvasView &view, const CanvasInput &canvas) const override
         {
             if (!canvas.hovered)
                 return;
             const float half = float(m_size) * 0.5f;
-            const core::Vec2f centre{std::floor(canvas.mouse.x) + 0.5f, std::floor(canvas.mouse.y) + 0.5f};
-            const core::Vec2f a = view.toScreen(centre - core::Vec2f{half, half}, canvas.origin);
-            const core::Vec2f b = view.toScreen(centre + core::Vec2f{half, half}, canvas.origin);
+            const core::Vec2f center{std::floor(canvas.mouse.x) + 0.5f, std::floor(canvas.mouse.y) + 0.5f};
+            const core::Vec2f topLeft = view.toScreen(center - core::Vec2f{half, half}, canvas.origin);
+            const core::Vec2f bottomRight = view.toScreen(center + core::Vec2f{half, half}, canvas.origin);
             // Dark then light, visible on any image
-            dl->AddRect({a.x - 1, a.y - 1}, {b.x + 1, b.y + 1}, IM_COL32(0, 0, 0, 160));
-            dl->AddRect({a.x, a.y}, {b.x, b.y}, IM_COL32(255, 255, 255, 200));
+            drawList->AddRect({topLeft.x - 1, topLeft.y - 1}, {bottomRight.x + 1, bottomRight.y + 1}, IM_COL32(0, 0, 0, 160));
+            drawList->AddRect({topLeft.x, topLeft.y}, {bottomRight.x, bottomRight.y}, IM_COL32(255, 255, 255, 200));
         }
 
     private:
-        static core::Vec2f snapped(core::Vec2f p) { return {std::floor(p.x), std::floor(p.y)}; }
+        static core::Vec2f snapped(core::Vec2f point) { return {std::floor(point.x), std::floor(point.y)}; }
         void paint(ToolContext &ctx, const std::vector<core::Vec2f> &points)
         {
-            const ImVec4 &c = ctx.shared.color;
-            ctx.app.strokePoints(points, {c.x, c.y, c.z}, float(m_size));
+            const ImVec4 &color = ctx.shared.color;
+            ctx.app.strokePoints(points, {color.x, color.y, color.z}, float(m_size));
         }
 
         int m_size = 2;
@@ -142,32 +142,32 @@ namespace ui
                 ImGui::SameLine();
             }
             slider("Size", &m_size, 1.0f, 500.0f, "%.0f px", ImGuiSliderFlags_Logarithmic, "Diameter of a dab");
-            slider("Hardness", &m_hardness, 0.0f, 1.0f, "%.2f", 0, "0: soft edge from the centre out. 1: a hard edge with one antialiased pixel");
+            slider("Hardness", &m_hardness, 0.0f, 1.0f, "%.2f", 0, "0: soft edge from the center out. 1: a hard edge with one antialiased pixel");
             slider("Opacity", &m_opacity, 0.0f, 1.0f, "%.2f", 0, "The most the whole stroke can cover, however often it overlaps itself");
             slider("Flow", &m_flow, 0.01f, 1.0f, "%.2f", 0, "How much each dab adds: low flow builds up where you go over the same spot");
             slider("Spacing", &m_spacing, 0.02f, 1.0f, "%.2f", 0, "Distance between dabs, as a share of the diameter");
             slider("Smoothing", &m_smoothing, 0.0f, 0.9f, "%.2f", 0, "Trails the pointer to iron out hand shake");
         }
 
-        void press(ToolContext &ctx, const ToolEvent &e) override
+        void press(ToolContext &ctx, const ToolEvent &event) override
         {
-            const ImVec4 &c = ctx.shared.color;
-            m_active = ctx.app.beginStamp({{c.x, c.y, c.z}, m_opacity, m_erase});
+            const ImVec4 &color = ctx.shared.color;
+            m_active = ctx.app.beginStamp({{color.x, color.y, color.z}, m_opacity, m_erase});
             if (!m_active)
                 return;
-            m_pos = e.pos;
+            m_pos = event.pos;
             std::vector<core::Vec2f> dabs;
             m_spacer.begin(m_pos, dabs);
-            m_diameter = m_size * e.pressure;
+            m_diameter = m_size * event.pressure;
             ctx.app.stampDabs(dabs, m_diameter, m_hardness, m_flow);
         }
 
-        void drag(ToolContext &ctx, const ToolEvent &e) override
+        void drag(ToolContext &ctx, const ToolEvent &event) override
         {
             if (!m_active)
                 return;
-            m_pos = core::smoothTowards(m_pos, e.pos, m_smoothing);
-            m_diameter = m_size * e.pressure;
+            m_pos = core::smoothTowards(m_pos, event.pos, m_smoothing);
+            m_diameter = m_size * event.pressure;
             std::vector<core::Vec2f> dabs;
             m_spacer.moveTo(m_pos, m_diameter * m_spacing, dabs);
             ctx.app.stampDabs(dabs, m_diameter, m_hardness, m_flow);
@@ -181,22 +181,22 @@ namespace ui
             m_active = false;
         }
 
-        void overlay(ImDrawList *dl, const CanvasView &view, const CanvasInput &canvas) const override
+        void overlay(ImDrawList *drawList, const CanvasView &view, const CanvasInput &canvas) const override
         {
             if (!canvas.hovered)
                 return;
-            const core::Vec2f c = view.toScreen(canvas.mouse, canvas.origin);
-            const float r = std::max(1.0f, m_size * 0.5f * view.zoom);
-            dl->AddCircle({c.x, c.y}, r + 1.0f, IM_COL32(0, 0, 0, 160), 0, 1.0f);
-            dl->AddCircle({c.x, c.y}, r, IM_COL32(255, 255, 255, 200), 0, 1.0f);
+            const core::Vec2f center = view.toScreen(canvas.mouse, canvas.origin);
+            const float radius = std::max(1.0f, m_size * 0.5f * view.zoom);
+            drawList->AddCircle({center.x, center.y}, radius + 1.0f, IM_COL32(0, 0, 0, 160), 0, 1.0f);
+            drawList->AddCircle({center.x, center.y}, radius, IM_COL32(255, 255, 255, 200), 0, 1.0f);
         }
 
     private:
-        static void slider(const char *label, float *v, float lo, float hi, const char *format, ImGuiSliderFlags flags, const char *tooltip)
+        static void slider(const char *label, float *value, float lo, float hi, const char *format, ImGuiSliderFlags flags, const char *tooltip)
         {
             ImGui::SameLine();
             ImGui::SetNextItemWidth(90.0f);
-            ImGui::SliderFloat(label, v, lo, hi, format, flags | ImGuiSliderFlags_AlwaysClamp);
+            ImGui::SliderFloat(label, value, lo, hi, format, flags | ImGuiSliderFlags_AlwaysClamp);
             ImGui::SetItemTooltip("%s", tooltip);
         }
 
@@ -224,13 +224,13 @@ namespace ui
             ImGui::SetItemTooltip("On: the colour you see. Off: the active layer's own pixel");
         }
 
-        void press(ToolContext &ctx, const ToolEvent &e) override { pick(ctx, e); }
-        void drag(ToolContext &ctx, const ToolEvent &e) override { pick(ctx, e); }
+        void press(ToolContext &ctx, const ToolEvent &event) override { pick(ctx, event); }
+        void drag(ToolContext &ctx, const ToolEvent &event) override { pick(ctx, event); }
 
     private:
-        void pick(ToolContext &ctx, const ToolEvent &e)
+        void pick(ToolContext &ctx, const ToolEvent &event)
         {
-            if (const auto rgba = ctx.app.pickColor(pixelAt(e.pos), m_composite))
+            if (const auto rgba = ctx.app.pickColor(pixelAt(event.pos), m_composite))
                 ctx.shared.color = {(*rgba)[0] / 255.0f, (*rgba)[1] / 255.0f, (*rgba)[2] / 255.0f, 1.0f};
         }
 
@@ -252,11 +252,11 @@ namespace ui
             regionOptions(m_threshold, m_compare);
         }
 
-        void press(ToolContext &ctx, const ToolEvent &e) override
+        void press(ToolContext &ctx, const ToolEvent &event) override
         {
-            const ImVec4 &c = ctx.shared.color;
-            const auto to8 = [](float v) { return std::uint8_t(std::lround(std::clamp(v, 0.0f, 1.0f) * 255.0f)); };
-            ctx.app.bucketFill(pixelAt(e.pos), m_threshold, m_compare, {to8(c.x), to8(c.y), to8(c.z), 255});
+            const ImVec4 &color = ctx.shared.color;
+            const auto to8 = [](float value) { return std::uint8_t(std::lround(std::clamp(value, 0.0f, 1.0f) * 255.0f)); };
+            ctx.app.bucketFill(pixelAt(event.pos), m_threshold, m_compare, {to8(color.x), to8(color.y), to8(color.z), 255});
         }
 
     private:

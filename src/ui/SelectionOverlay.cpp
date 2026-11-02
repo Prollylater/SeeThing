@@ -17,19 +17,19 @@ namespace ui
 
         void drawOverlay(const ImDrawList *, const ImDrawCmd *cmd)
         {
-            const OverlayData &d = *static_cast<const OverlayData *>(cmd->UserCallbackData);
-            if (d.mask->empty())
+            const OverlayData &data = *static_cast<const OverlayData *>(cmd->UserCallbackData);
+            if (data.mask->empty())
                 return;
             // The backend scissors draws, not callbacks
             GLint viewport[4] = {};
             glGetIntegerv(GL_VIEWPORT, viewport);
-            const float scale = float(viewport[2]) / d.where.viewportSize.x;
+            const float scale = float(viewport[2]) / data.where.viewportSize.x;
             const ImVec4 clip = cmd->ClipRect;
-            const core::Vec2f pos = d.where.viewportPos;
+            const core::Vec2f pos = data.where.viewportPos;
             glEnable(GL_SCISSOR_TEST);
             glScissor(int((clip.x - pos.x) * scale), int(float(viewport[3]) - (clip.w - pos.y) * scale),
                       int((clip.z - clip.x) * scale), int((clip.w - clip.y) * scale));
-            d.renderer->drawSelectionOverlay(*d.mask, d.where);
+            data.renderer->drawSelectionOverlay(*data.mask, data.where);
         }
     }
 
@@ -47,11 +47,11 @@ namespace ui
         const ImDrawCallback reset = ImGui::GetPlatformIO().DrawCallback_ResetRenderState;
         if (!reset)
             return;
-        ImDrawList *dl = ImGui::GetWindowDrawList();
+        ImDrawList *drawList = ImGui::GetWindowDrawList();
         const core::Vec2f end = canvas.origin + canvas.size;
-        dl->PushClipRect({canvas.origin.x, canvas.origin.y}, {end.x, end.y}, true);
-        dl->AddCallback(drawOverlay, &data, sizeof(data));
-        dl->AddCallback(reset, nullptr);
-        dl->PopClipRect();
+        drawList->PushClipRect({canvas.origin.x, canvas.origin.y}, {end.x, end.y}, true);
+        drawList->AddCallback(drawOverlay, &data, sizeof(data));
+        drawList->AddCallback(reset, nullptr);
+        drawList->PopClipRect();
     }
 }

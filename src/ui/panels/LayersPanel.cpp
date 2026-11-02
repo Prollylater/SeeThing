@@ -75,9 +75,9 @@ namespace ui
             for (core::BlendMode mode : core::blendModes)
                 if (ImGui::Selectable(core::blendModeName(mode), mode == props.blend) && mode != props.blend)
                 {
-                    doc::LayerProps p = props;
-                    p.blend = mode;
-                    doc::setLayerProps(doc, index, p, std::string("Blend ") + core::blendModeName(mode));
+                    doc::LayerProps changed = props;
+                    changed.blend = mode;
+                    doc::setLayerProps(doc, index, changed, std::string("Blend ") + core::blendModeName(mode));
                 }
             ImGui::EndCombo();
         }
@@ -87,9 +87,9 @@ namespace ui
         float percent = props.opacity * 100.0f;
         if (ImGui::SliderFloat("Opacity", &percent, 0.0f, 100.0f, "%.0f%%", ImGuiSliderFlags_AlwaysClamp))
         {
-            doc::LayerProps p = props;
-            p.opacity = percent / 100.0f;
-            doc.setProps(index, p);
+            doc::LayerProps changed = props;
+            changed.opacity = percent / 100.0f;
+            doc.setProps(index, changed);
         }
         if (ImGui::IsItemActivated())
             m_dragStart = props;
@@ -99,9 +99,9 @@ namespace ui
         bool locked = props.locked;
         if (ImGui::Checkbox("Locked", &locked))
         {
-            doc::LayerProps p = props;
-            p.locked = locked;
-            doc::setLayerProps(doc, index, p, (locked ? "Lock " : "Unlock ") + props.name);
+            doc::LayerProps changed = props;
+            changed.locked = locked;
+            doc::setLayerProps(doc, index, changed, (locked ? "Lock " : "Unlock ") + props.name);
         }
         ImGui::SetItemTooltip("A locked layer can't be painted on or replaced");
     }
@@ -123,9 +123,9 @@ namespace ui
 
             if (ImGui::SmallButton(props.visible ? ICON_CI_EYE : ICON_CI_EYE_CLOSED))
             {
-                doc::LayerProps p = props;
-                p.visible = !p.visible;
-                doc::setLayerProps(doc, i, p, (p.visible ? "Show " : "Hide ") + props.name);
+                doc::LayerProps changed = props;
+                changed.visible = !changed.visible;
+                doc::setLayerProps(doc, i, changed, (changed.visible ? "Show " : "Hide ") + props.name);
             }
             ImGui::SetItemTooltip(props.visible ? "Hide" : "Show");
             ImGui::SameLine();
@@ -171,9 +171,9 @@ namespace ui
             const int index = doc.indexOf(m_renaming);
             if (index >= 0 && m_renameBuffer[0] != '\0')
             {
-                doc::LayerProps p = doc.layer(index).props();
-                p.name = m_renameBuffer;
-                doc::setLayerProps(doc, index, p, "Rename " + doc.layer(index).props().name);
+                doc::LayerProps changed = doc.layer(index).props();
+                changed.name = m_renameBuffer;
+                doc::setLayerProps(doc, index, changed, "Rename " + doc.layer(index).props().name);
             }
             m_renaming = 0;
             ImGui::CloseCurrentPopup();

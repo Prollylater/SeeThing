@@ -16,7 +16,7 @@ namespace doc
     }
 
     Document::Document(int width, int height)
-        : m_w(width), m_h(height), m_serial(nextSerial()), m_selection(width, height, 1, core::ColorSpace::Mask)
+        : m_width(width), m_height(height), m_serial(nextSerial()), m_selection(width, height, 1, core::ColorSpace::Mask)
     {
         if (width <= 0 || height <= 0)
             throw std::invalid_argument("doc::Document: empty size");
@@ -64,7 +64,7 @@ namespace doc
 
     LayerId Document::insertLayer(int index, Layer layer)
     {
-        if (layer.width() != m_w || layer.height() != m_h || layer.m_pixels.channels() != 4)
+        if (layer.width() != m_width || layer.height() != m_height || layer.m_pixels.channels() != 4)
             throw std::invalid_argument("doc::Document: a layer must be RGBA at the document size");
         if (index < 0 || index > layerCount())
             throw std::out_of_range("doc::Document::insertLayer: bad index");
@@ -117,8 +117,8 @@ namespace doc
 
     void Document::pixelsChanged(LayerId id, core::Recti rect)
     {
-        Layer &l = layerById(id);
-        l.m_dirty = core::unite(l.m_dirty, core::intersect(rect, bounds()));
+        Layer &layer = layerById(id);
+        layer.m_dirty = core::unite(layer.m_dirty, core::intersect(rect, bounds()));
         touch();
     }
 
@@ -130,7 +130,7 @@ namespace doc
     void Document::selectionChanged(core::Recti rect)
     {
         m_selectionDirty = core::unite(m_selectionDirty, core::intersect(rect, bounds()));
-        m_hasSelection = std::any_of(m_selection.data(), m_selection.data() + m_selection.size(), [](std::uint8_t v) { return v != 0; });
+        m_hasSelection = std::any_of(m_selection.data(), m_selection.data() + m_selection.size(), [](std::uint8_t value) { return value != 0; });
         touch();
     }
 

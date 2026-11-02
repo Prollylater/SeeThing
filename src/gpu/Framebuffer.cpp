@@ -24,7 +24,7 @@ namespace gpu
         }
     }
 
-    Framebuffer::Framebuffer(Texture &color) : m_w(color.width()), m_h(color.height())
+    Framebuffer::Framebuffer(Texture &color) : m_width(color.width()), m_height(color.height())
     {
         if (color.empty())
             throw std::invalid_argument("gpu::Framebuffer: empty texture");
@@ -38,6 +38,6 @@ namespace gpu
     void Framebuffer::bind() const
     {
         glBindFramebuffer(GL_FRAMEBUFFER, m_fbo.get());
-        glViewport(0, 0, m_w, m_h);
+        glViewport(0, 0, m_width, m_height);
     }
 }

@@ -16,47 +16,47 @@ namespace
 
 TEST_CASE("CanvasView: toImage inverts toScreen")
 {
-    CanvasView v;
-    v.pan = {13, -7};
-    v.zoom = 2.5f;
+    CanvasView view;
+    view.pan = {13, -7};
+    view.zoom = 2.5f;
     const Vec2f origin{100, 50};
-    checkNear(v.toScreen({0, 0}, origin), {113, 43});
-    checkNear(v.toScreen({4, 2}, origin), {123, 48});
-    for (Vec2f p : {Vec2f{0, 0}, Vec2f{3.5f, 9}, Vec2f{-2, 40}})
-        checkNear(v.toImage(v.toScreen(p, origin), origin), p);
+    checkNear(view.toScreen({0, 0}, origin), {113, 43});
+    checkNear(view.toScreen({4, 2}, origin), {123, 48});
+    for (Vec2f point : {Vec2f{0, 0}, Vec2f{3.5f, 9}, Vec2f{-2, 40}})
+        checkNear(view.toImage(view.toScreen(point, origin), origin), point);
 }
 
 TEST_CASE("CanvasView: zooming keeps the point under the cursor")
 {
-    CanvasView v;
-    v.pan = {20, 30};
+    CanvasView view;
+    view.pan = {20, 30};
     const Vec2f origin{10, 10}, cursor{210, 140};
-    const Vec2f before = v.toImage(cursor, origin);
-    v.zoomAround(cursor, origin, 4.0f);
-    CHECK(v.zoom == 4.0f);
-    checkNear(v.toImage(cursor, origin), before);
+    const Vec2f before = view.toImage(cursor, origin);
+    view.zoomAround(cursor, origin, 4.0f);
+    CHECK(view.zoom == 4.0f);
+    checkNear(view.toImage(cursor, origin), before);
 
-    v.zoomAround(cursor, origin, 1000.0f);
-    CHECK(v.zoom == CanvasView::maxZoom);
-    checkNear(v.toImage(cursor, origin), before);
+    view.zoomAround(cursor, origin, 1000.0f);
+    CHECK(view.zoom == CanvasView::maxZoom);
+    checkNear(view.toImage(cursor, origin), before);
 }
 
 TEST_CASE("CanvasView: fit shows the whole image, centered, never enlarged")
 {
-    CanvasView v;
-    v.fit({1000, 500}, {500, 500});
-    CHECK(v.zoom == 0.5f);
-    checkNear(v.pan, {0, 125});
-    CHECK(v.fittedSize == Vec2f{1000, 500});
+    CanvasView view;
+    view.fit({1000, 500}, {500, 500});
+    CHECK(view.zoom == 0.5f);
+    checkNear(view.pan, {0, 125});
+    CHECK(view.fittedSize == Vec2f{1000, 500});
 
-    v.fit({100, 50}, {500, 500});
-    CHECK(v.zoom == 1.0f);
-    checkNear(v.pan, {200, 225});
+    view.fit({100, 50}, {500, 500});
+    CHECK(view.zoom == 1.0f);
+    checkNear(view.pan, {200, 225});
 
-    v.zoom = 3;
-    v.actualSize({100, 50}, {500, 500});
-    CHECK(v.zoom == 1.0f);
-    checkNear(v.pan, {200, 225});
+    view.zoom = 3;
+    view.actualSize({100, 50}, {500, 500});
+    CHECK(view.zoom == 1.0f);
+    checkNear(view.pan, {200, 225});
 }
 
 TEST_CASE("CanvasView: wheel notches reach 100% and powers of two exactly")

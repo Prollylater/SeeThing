@@ -73,65 +73,65 @@ namespace ui
 
     void SegmentationPanel::drawSlic(App &app)
     {
-        Slic &s = m_slic;
+        Slic &slic = m_slic;
         ImGui::TextWrapped("Superpixels: K clusters seeded on a grid, grown in Lab colour and position.");
         ImGui::Spacing();
-        ImGui::SliderInt("Superpixels K", &s.k, 1, 1000);
+        ImGui::SliderInt("Superpixels K", &slic.k, 1, 1000);
         ImGui::SetItemTooltip("Number of clusters. The grid step is sqrt(pixels / K)");
-        ImGui::SliderInt("Compactness m", &s.compactness, 1, 40);
+        ImGui::SliderInt("Compactness m", &slic.compactness, 1, 40);
         ImGui::SetItemTooltip("Weight of distance against colour: higher gives rounder, more regular superpixels");
 
         // Same order as XYZRefHandle and XYZrefs in Mat.h
         const char *illuminants[] = {"A (tungsten)", "B (old noon sun)", "C (old daylight)", "D50 (ICC)", "D55 (morning)",
                                      "D65 (sRGB daylight)", "D75 (north sky)", "E (equal energy)", "F1 (fluorescent)"};
-        combo("Reference white", s.illuminant, illuminants, IM_COUNTOF(illuminants));
+        combo("Reference white", slic.illuminant, illuminants, IM_COUNTOF(illuminants));
         ImGui::SetItemTooltip("White point used to normalise XYZ before Lab. D65 matches sRGB images");
-        ImGui::Checkbox("Scale XYZ", &s.scaleXyz);
+        ImGui::Checkbox("Scale XYZ", &slic.scaleXyz);
         ImGui::SetItemTooltip("Multiplies XYZ by the factor below before Lab; off is standard Lab");
-        if (s.scaleXyz)
-            ImGui::SliderInt("Factor", &s.xyzScale, 1, 100);
+        if (slic.scaleXyz)
+            ImGui::SliderInt("Factor", &slic.xyzScale, 1, 100);
 
-        combo("Output", s.coloration, colorations, IM_COUNTOF(colorations));
+        combo("Output", slic.coloration, colorations, IM_COUNTOF(colorations));
         ImGui::Spacing();
         if (runButton(app))
-            app.runSlic(SlicParameter(s.k, s.compactness, s.xyzScale, s.illuminant, s.scaleXyz), s.coloration);
+            app.runSlic(SlicParameter(slic.k, slic.compactness, slic.xyzScale, slic.illuminant, slic.scaleXyz), slic.coloration);
         ImGui::SameLine();
         if (ImGui::Button("Defaults"))
-            s = Slic{};
+            slic = Slic{};
     }
 
     void SegmentationPanel::drawSeeded(App &app)
     {
-        Seeded &s = m_seeded;
+        Seeded &seeded = m_seeded;
         ImGui::TextWrapped("Seeds grow into regions while neighbours stay under the threshold; close regions are merged.");
         ImGui::Spacing();
         const char *sources[] = {"Random", "One per grid cell", "Placed with the Seeds tool"};
-        combo("Seeds from", s.source, sources, IM_COUNTOF(sources));
+        combo("Seeds from", seeded.source, sources, IM_COUNTOF(sources));
         ImGui::SetItemTooltip("Random: anywhere. Grid: spread evenly. Placed: the seeds on the image (Seeds tool, S)");
-        const bool placed = s.source == 2;
+        const bool placed = seeded.source == 2;
         if (placed)
             ImGui::Text("%zu seeds placed", app.document().seeds().size());
         else
-            ImGui::SliderInt("Seeds", &s.seeds, 1, 5000);
+            ImGui::SliderInt("Seeds", &seeded.seeds, 1, 5000);
 
-        combo("Compare with", s.compare, compareNames, IM_COUNTOF(compareNames));
+        combo("Compare with", seeded.compare, compareNames, IM_COUNTOF(compareNames));
         ImGui::SetItemTooltip("What a neighbour pixel is compared to before it joins a region");
-        ImGui::SliderFloat("Threshold", &s.threshold, 0.0f, 50.0f, "%.1f");
+        ImGui::SliderFloat("Threshold", &seeded.threshold, 0.0f, 50.0f, "%.1f");
         ImGui::SetItemTooltip("Largest difference that still joins the region; also the merge threshold");
-        ImGui::Checkbox("Adaptive", &s.adaptive);
+        ImGui::Checkbox("Adaptive", &seeded.adaptive);
         ImGui::SetItemTooltip("Compare with the current pixel until the share below of the image is visited, then with the region's colour. Ignores \"Compare with\"");
-        if (s.adaptive)
+        if (seeded.adaptive)
         {
-            ImGui::SliderFloat("Switch at", &s.adaptPercent, 0.0f, 100.0f, "%.0f%% visited");
+            ImGui::SliderFloat("Switch at", &seeded.adaptPercent, 0.0f, 100.0f, "%.0f%% visited");
             ImGui::SetItemTooltip("Share of the image visited before comparisons switch to the region's colour");
         }
 
-        combo("Output", s.coloration, colorations, IM_COUNTOF(colorations));
+        combo("Output", seeded.coloration, colorations, IM_COUNTOF(colorations));
         ImGui::Spacing();
         if (runButton(app))
-            app.runSeeded(SeedRGParameter(s.threshold, s.adaptPercent, s.seeds, s.compare, !placed, s.source == 1, s.adaptive), s.coloration);
+            app.runSeeded(SeedRGParameter(seeded.threshold, seeded.adaptPercent, seeded.seeds, seeded.compare, !placed, seeded.source == 1, seeded.adaptive), seeded.coloration);
         ImGui::SameLine();
         if (ImGui::Button("Defaults"))
-            s = Seeded{};
+            seeded = Seeded{};
     }
 }

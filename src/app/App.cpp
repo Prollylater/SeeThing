@@ -1,11 +1,11 @@
 #include "App.h"
 
-#include "AssetPath.h"
-#include "MatBridge.h"
+#include "utils/AssetPath.h"
+#include "utils/MatBridge.h"
 #include "core/Color.h"
 #include "core/ImageIO.h"
 #include "doc/Edits.h"
-#include "RegionFill.h"
+#include "engine/RegionFill.h"
 
 #include <algorithm>
 #include <chrono>
@@ -20,11 +20,11 @@ namespace
         return std::filesystem::path(path).filename().string();
     }
 
-    core::Image<std::uint8_t> copyOf(core::ImageView<const std::uint8_t> v)
+    core::Image<std::uint8_t> copyOf(core::ImageView<const std::uint8_t> view)
     {
-        core::Image<std::uint8_t> out(v.width(), v.height(), v.channels());
-        for (int y = 0; y < v.height(); ++y)
-            std::copy_n(v.row(y), std::size_t(v.width()) * v.channels(), out.row(y));
+        core::Image<std::uint8_t> out(view.width(), view.height(), view.channels());
+        for (int y = 0; y < view.height(); ++y)
+            std::copy_n(view.row(y), std::size_t(view.width()) * view.channels(), out.row(y));
         return out;
     }
 
@@ -128,10 +128,10 @@ void App::redo()
 void App::jumpTo(std::size_t cursor)
 {
     endStroke();
-    doc::History &h = m_doc.history();
-    while (h.cursor() > cursor && h.canUndo())
+    doc::History &history = m_doc.history();
+    while (history.cursor() > cursor && history.canUndo())
         m_doc.undo();
-    while (h.cursor() < cursor && h.canRedo())
+    while (history.cursor() < cursor && history.canRedo())
         m_doc.redo();
 }
 
@@ -186,9 +186,9 @@ void App::endStroke()
     doc::PixelEditRecorder rec(m_doc, stroke->layer);
     rec.touch(stroke->rect);
     core::Image<std::uint8_t> &pixels = rec.image();
-    const core::Recti r = stroke->rect;
-    for (int y = 0; y < r.h; ++y)
-        std::copy_n(stroke->pixels.row(y), std::size_t(r.w) * 4, pixels.row(r.y + y) + std::size_t(r.x) * 4);
+    const core::Recti rect = stroke->rect;
+    for (int y = 0; y < rect.h; ++y)
+        std::copy_n(stroke->pixels.row(y), std::size_t(rect.w) * 4, pixels.row(rect.y + y) + std::size_t(rect.x) * 4);
     rec.commit(m_stroke_label);
 }
 
@@ -198,27 +198,27 @@ core::Image<std::uint8_t> App::activePixels() const
     return layer ? core::toRGB8(layer->pixels()) : core::Image<std::uint8_t>();
 }
 
-std::optional<std::array<std::uint8_t, 4>> App::pickColor(core::Vec2i p, bool composite)
+std::optional<std::array<std::uint8_t, 4>> App::pickColor(core::Vec2i pixel, bool composite)
 {
-    if (m_doc.empty() || p.x < 0 || p.y < 0 || p.x >= m_doc.width() || p.y >= m_doc.height())
+    if (m_doc.empty() || pixel.x < 0 || pixel.y < 0 || pixel.x >= m_doc.width() || pixel.y >= m_doc.height())
         return std::nullopt;
     if (composite)
     {
         m_gpu.sync(m_doc);
-        const core::Image<std::uint8_t> px = m_gpu.compositeTexture().download8({p.x, p.y, 1, 1});
+        const core::Image<std::uint8_t> px = m_gpu.compositeTexture().download8({pixel.x, pixel.y, 1, 1});
         return std::array<std::uint8_t, 4>{px(0, 0, 0), px(0, 0, 1), px(0, 0, 2), px(0, 0, 3)};
     }
     const doc::Layer *layer = m_doc.activeLayer();
     if (!layer)
         return std::nullopt;
     const core::Image<std::uint8_t> &px = layer->pixels();
-    return std::array<std::uint8_t, 4>{px(p.x, p.y, 0), px(p.x, p.y, 1), px(p.x, p.y, 2), px(p.x, p.y, 3)};
+    return std::array<std::uint8_t, 4>{px(pixel.x, pixel.y, 0), px(pixel.x, pixel.y, 1), px(pixel.x, pixel.y, 2), px(pixel.x, pixel.y, 3)};
 }
 
-bool App::bucketFill(core::Vec2i p, float threshold, int compare, std::array<std::uint8_t, 4> rgba)
+bool App::bucketFill(core::Vec2i pixel, float threshold, int compare, std::array<std::uint8_t, 4> rgba)
 {
     const doc::Layer *layer = m_doc.activeLayer();
-    if (!layer || p.x < 0 || p.y < 0 || p.x >= m_doc.width() || p.y >= m_doc.height())
+    if (!layer || pixel.x < 0 || pixel.y < 0 || pixel.x >= m_doc.width() || pixel.y >= m_doc.height())
         return false;
     if (layer->props().locked)
     {
@@ -228,22 +228,22 @@ bool App::bucketFill(core::Vec2i p, float threshold, int compare, std::array<std
     endStroke();
     doc::Shape region;
     // Limited to the selection: the region can't leak out through an unselected gap
-    const double ms = millisecondsOf([&] { region = growRegion(activePixels(), p, threshold, compare, m_doc.hasSelection() ? &m_doc.selection() : nullptr); });
+    const double ms = millisecondsOf([&] { region = growRegion(activePixels(), pixel, threshold, compare, m_doc.hasSelection() ? &m_doc.selection() : nullptr); });
     const bool filled = doc::fillMask(m_doc, layer->id(), region.mask, region.bounds, rgba, "Bucket fill");
-    m_log.info("Bucket fill at {}, {}: {} x {} box, {:.0f} ms", p.x, p.y, region.bounds.w, region.bounds.h, ms);
+    m_log.info("Bucket fill at {}, {}: {} x {} box, {:.0f} ms", pixel.x, pixel.y, region.bounds.w, region.bounds.h, ms);
     return filled;
 }
 
-bool App::magicWand(core::Vec2i p, float threshold, int compare, doc::SelectMode mode, bool limitToSelection)
+bool App::magicWand(core::Vec2i pixel, float threshold, int compare, doc::SelectMode mode, bool limitToSelection)
 {
-    if (!m_doc.activeLayer() || p.x < 0 || p.y < 0 || p.x >= m_doc.width() || p.y >= m_doc.height())
+    if (!m_doc.activeLayer() || pixel.x < 0 || pixel.y < 0 || pixel.x >= m_doc.width() || pixel.y >= m_doc.height())
         return false;
     endStroke();
     doc::Shape region;
     const core::Image<std::uint8_t> *limit = limitToSelection && m_doc.hasSelection() ? &m_doc.selection() : nullptr;
-    const double ms = millisecondsOf([&] { region = growRegion(activePixels(), p, threshold, compare, limit); });
+    const double ms = millisecondsOf([&] { region = growRegion(activePixels(), pixel, threshold, compare, limit); });
     const std::string label = mode == doc::SelectMode::Replace ? "Magic wand" : std::string("Magic wand (") + doc::selectModeName(mode) + ")";
-    m_log.info("Magic wand at {}, {}: {} x {} box, {:.0f} ms", p.x, p.y, region.bounds.w, region.bounds.h, ms);
+    m_log.info("Magic wand at {}, {}: {} x {} box, {:.0f} ms", pixel.x, pixel.y, region.bounds.w, region.bounds.h, ms);
     return doc::applySelection(m_doc, region, mode, label);
 }
 
@@ -296,8 +296,8 @@ void App::runSeeded(const SeedRGParameter &settings, int coloration)
             return;
         }
         param.m_points.clear();
-        for (core::Vec2i p : m_doc.seeds())
-            param.m_points.push_back({p.x, p.y});
+        for (core::Vec2i seed : m_doc.seeds())
+            param.m_points.push_back({seed.x, seed.y});
         param.m_seednb = int(param.m_points.size());
     }
     endStroke();

@@ -1,6 +1,6 @@
 #include "RegionFill.h"
 
-#include "MatBridge.h"
+#include "utils/MatBridge.h"
 #include "RegionGrowingAlg.h"
 
 #include <memory>

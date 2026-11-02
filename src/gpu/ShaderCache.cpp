@@ -26,9 +26,9 @@ namespace gpu
 
         fs::file_time_type modified(const fs::path &path)
         {
-            std::error_code ec;
-            fs::file_time_type t = fs::last_write_time(path, ec);
-            return ec ? fs::file_time_type::min() : t;
+            std::error_code errC;
+            fs::file_time_type written = fs::last_write_time(path, errC);
+            return errC ? fs::file_time_type::min() : written;
         }
     }
 

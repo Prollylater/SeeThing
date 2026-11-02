@@ -44,47 +44,47 @@ namespace core
 
         std::uint8_t toByte(float v01)
         {
-            float v = std::round(v01 * 255.0f);
-            return static_cast<std::uint8_t>(v < 0.0f ? 0.0f : (v > 255.0f ? 255.0f : v));
+            float scaled = std::round(v01 * 255.0f);
+            return static_cast<std::uint8_t>(scaled < 0.0f ? 0.0f : (scaled > 255.0f ? 255.0f : scaled));
         }
 
-        void requireChannels(int c)
+        void requireChannels(int channels)
         {
-            if (c < 1 || c > 4)
+            if (channels < 1 || channels > 4)
                 throw std::invalid_argument("colour converter: expected 1 to 4 channels");
         }
 
         // Rec. 601 luma on the encoded values, as OpenCV and most viewers do
-        std::uint8_t luma(const std::uint8_t *p, int c)
+        std::uint8_t luma(const std::uint8_t *pixel, int channels)
         {
-            if (c < 3)
-                return p[0];
-            return static_cast<std::uint8_t>(std::lround(0.299f * p[0] + 0.587f * p[1] + 0.114f * p[2]));
+            if (channels < 3)
+                return pixel[0];
+            return static_cast<std::uint8_t>(std::lround(0.299f * pixel[0] + 0.587f * pixel[1] + 0.114f * pixel[2]));
         }
     }
 
-    Vec3f whitePointXYZ(WhitePoint wp) { return whitePoints[static_cast<int>(wp)].xyz; }
-    const char *whitePointName(WhitePoint wp) { return whitePoints[static_cast<int>(wp)].name; }
+    Vec3f whitePointXYZ(WhitePoint whitePt) { return whitePoints[static_cast<int>(whitePt)].xyz; }
+    const char *whitePointName(WhitePoint whitePt) { return whitePoints[static_cast<int>(whitePt)].name; }
 
-    float srgbToLinear(float v) { return v <= 0.04045f ? v / 12.92f : std::pow((v + 0.055f) / 1.055f, 2.4f); }
-    float linearToSrgb(float v) { return v <= 0.0031308f ? v * 12.92f : 1.055f * std::pow(v, 1.0f / 2.4f) - 0.055f; }
+    float srgbToLinear(float encoded) { return encoded <= 0.04045f ? encoded / 12.92f : std::pow((encoded + 0.055f) / 1.055f, 2.4f); }
+    float linearToSrgb(float linear) { return linear <= 0.0031308f ? linear * 12.92f : 1.055f * std::pow(linear, 1.0f / 2.4f) - 0.055f; }
 
-    Vec3f srgbToLab(Vec3f srgb01, WhitePoint wp)
+    Vec3f srgbToLab(Vec3f srgb01, WhitePoint whitePt)
     {
         Vec3f lin{srgbToLinear(srgb01.x), srgbToLinear(srgb01.y), srgbToLinear(srgb01.z)};
         Vec3f xyz = rgbToXyz * lin;
-        Vec3f w = whitePointXYZ(wp);
-        float fx = labF(xyz.x / w.x), fy = labF(xyz.y / w.y), fz = labF(xyz.z / w.z);
+        Vec3f white = whitePointXYZ(whitePt);
+        float fx = labF(xyz.x / white.x), fy = labF(xyz.y / white.y), fz = labF(xyz.z / white.z); // f(X/Xn), f(Y/Yn), f(Z/Zn) of the CIE formula
         return {116.0f * fy - 16.0f, 500.0f * (fx - fy), 200.0f * (fy - fz)};
     }
 
-    Vec3f labToSrgb(Vec3f lab, WhitePoint wp)
+    Vec3f labToSrgb(Vec3f lab, WhitePoint whitePt)
     {
-        float fy = (lab.x + 16.0f) / 116.0f;
+        float fy = (lab.x + 16.0f) / 116.0f; // f(Y/Yn), then f(X/Xn) and f(Z/Zn)
         float fx = fy + lab.y / 500.0f;
         float fz = fy - lab.z / 200.0f;
-        Vec3f w = whitePointXYZ(wp);
-        Vec3f xyz{labFInv(fx) * w.x, labFInv(fy) * w.y, labFInv(fz) * w.z};
+        Vec3f white = whitePointXYZ(whitePt);
+        Vec3f xyz{labFInv(fx) * white.x, labFInv(fy) * white.y, labFInv(fz) * white.z};
         Vec3f lin = xyzToRgb * xyz;
         return {linearToSrgb(lin.x), linearToSrgb(lin.y), linearToSrgb(lin.z)};
     }
@@ -113,37 +113,37 @@ namespace core
     Image<std::uint8_t> toRGBA8(ImageView<const std::uint8_t> src)
     {
         requireChannels(src.channels());
-        const int c = src.channels();
+        const int channels = src.channels();
         Image<std::uint8_t> out(src.width(), src.height(), 4);
         for (int y = 0; y < src.height(); ++y)
             for (int x = 0; x < src.width(); ++x)
             {
                 for (int k = 0; k < 3; ++k)
-                    out(x, y, k) = src(x, y, c < 3 ? 0 : k);
-                out(x, y, 3) = (c == 2 || c == 4) ? src(x, y, c - 1) : 255;
+                    out(x, y, k) = src(x, y, channels < 3 ? 0 : k);
+                out(x, y, 3) = (channels == 2 || channels == 4) ? src(x, y, channels - 1) : 255;
             }
         return out;
     }
 
-    Image<float> toLab(ImageView<const std::uint8_t> src, WhitePoint wp)
+    Image<float> toLab(ImageView<const std::uint8_t> src, WhitePoint whitePt)
     {
         requireChannels(src.channels());
-        const int c = src.channels();
+        const int channels = src.channels();
         Image<float> out(src.width(), src.height(), 3, ColorSpace::Lab);
         for (int y = 0; y < src.height(); ++y)
             for (int x = 0; x < src.width(); ++x)
             {
-                const std::uint8_t *p = &src(x, y);
-                Vec3f rgb = c < 3 ? Vec3f{p[0] / 255.0f, p[0] / 255.0f, p[0] / 255.0f}
-                                  : Vec3f{p[0] / 255.0f, p[1] / 255.0f, p[2] / 255.0f};
-                Vec3f lab = srgbToLab(rgb, wp);
+                const std::uint8_t *pixel = &src(x, y);
+                Vec3f rgb = channels < 3 ? Vec3f{pixel[0] / 255.0f, pixel[0] / 255.0f, pixel[0] / 255.0f}
+                                  : Vec3f{pixel[0] / 255.0f, pixel[1] / 255.0f, pixel[2] / 255.0f};
+                Vec3f lab = srgbToLab(rgb, whitePt);
                 for (int k = 0; k < 3; ++k)
                     out(x, y, k) = lab[k];
             }
         return out;
     }
 
-    Image<std::uint8_t> labToRGB8(ImageView<const float> lab, WhitePoint wp)
+    Image<std::uint8_t> labToRGB8(ImageView<const float> lab, WhitePoint whitePt)
     {
         if (lab.channels() != 3)
             throw std::invalid_argument("labToRGB8: expected 3 channels");
@@ -151,7 +151,7 @@ namespace core
         for (int y = 0; y < lab.height(); ++y)
             for (int x = 0; x < lab.width(); ++x)
             {
-                Vec3f rgb = labToSrgb({lab(x, y, 0), lab(x, y, 1), lab(x, y, 2)}, wp);
+                Vec3f rgb = labToSrgb({lab(x, y, 0), lab(x, y, 1), lab(x, y, 2)}, whitePt);
                 for (int k = 0; k < 3; ++k)
                     out(x, y, k) = toByte(rgb[k]);
             }

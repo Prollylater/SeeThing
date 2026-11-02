@@ -50,9 +50,9 @@ Platform::Platform(const char *title, int width, int height, core::Log &log)
              reinterpret_cast<const char *>(glGetString(GL_RENDERER)));
 
     glfwSetWindowUserPointer(m_window, this);
-    glfwSetDropCallback(m_window, [](GLFWwindow *w, int count, const char **paths)
+    glfwSetDropCallback(m_window, [](GLFWwindow *window, int count, const char **paths)
                         {
-                            auto *self = static_cast<Platform *>(glfwGetWindowUserPointer(w));
+                            auto *self = static_cast<Platform *>(glfwGetWindowUserPointer(window));
                             for (int i = 0; i < count; ++i)
                                 self->m_dropped.emplace_back(paths[i]); });
     glfwSwapInterval(1);

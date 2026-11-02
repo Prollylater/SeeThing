@@ -66,12 +66,12 @@ namespace ui
                 drawSelectionOverlay(gpu.renderer(), gpu.selectionTexture(), m_view, input);
             handleInput(app, input);
 
-            ImDrawList *dl = ImGui::GetWindowDrawList();
+            ImDrawList *drawList = ImGui::GetWindowDrawList();
             const core::Vec2f end = input.origin + input.size;
-            dl->PushClipRect({input.origin.x, input.origin.y}, {end.x, end.y}, true);
+            drawList->PushClipRect({input.origin.x, input.origin.y}, {end.x, end.y}, true);
             drawSeeds(app, input);
-            tool.overlay(dl, m_view, input);
-            dl->PopClipRect();
+            tool.overlay(drawList, m_view, input);
+            drawList->PopClipRect();
         }
         else
         {
@@ -126,31 +126,31 @@ namespace ui
         Tool &tool = *m_tools[m_tool];
         ToolContext ctx{app, m_shared};
         const ImGuiIO &io = ImGui::GetIO();
-        const ToolEvent e{input.mouse, m_view.zoom, io.KeyShift, io.KeyAlt};
+        const ToolEvent event{input.mouse, m_view.zoom, io.KeyShift, io.KeyAlt};
         if (input.strokeStarted)
         {
             m_gesture = true;
-            tool.press(ctx, e);
+            tool.press(ctx, event);
         }
         else if (m_gesture && input.painting)
         {
-            tool.drag(ctx, e);
+            tool.drag(ctx, event);
         }
         if (m_gesture && input.strokeEnded)
         {
             m_gesture = false;
-            tool.release(ctx, e);
+            tool.release(ctx, event);
         }
     }
 
     void CanvasPanel::drawSeeds(const App &app, const CanvasInput &input) const
     {
-        ImDrawList *dl = ImGui::GetWindowDrawList();
-        for (core::Vec2i s : app.document().seeds())
+        ImDrawList *drawList = ImGui::GetWindowDrawList();
+        for (core::Vec2i seed : app.document().seeds())
         {
-            const core::Vec2f c = m_view.toScreen({s.x + 0.5f, s.y + 0.5f}, input.origin);
-            dl->AddCircleFilled({c.x, c.y}, 5.0f, IM_COL32(0, 0, 0, 200));
-            dl->AddCircleFilled({c.x, c.y}, 3.5f, IM_COL32(60, 230, 120, 255));
+            const core::Vec2f center = m_view.toScreen({seed.x + 0.5f, seed.y + 0.5f}, input.origin);
+            drawList->AddCircleFilled({center.x, center.y}, 5.0f, IM_COL32(0, 0, 0, 200));
+            drawList->AddCircleFilled({center.x, center.y}, 3.5f, IM_COL32(60, 230, 120, 255));
         }
     }
 }

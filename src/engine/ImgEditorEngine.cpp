@@ -92,10 +92,10 @@ void OpenGLEngine::sync(doc::Document &doc)
         auto it = m_layers.find(layer.id());
         if (it == m_layers.end())
         {
-            LayerGpu l;
-            l.tex = gpu::Texture::fromImage<std::uint8_t>(layer.pixels());
-            l.fbo = gpu::Framebuffer(l.tex);
-            m_layers.emplace(layer.id(), std::move(l));
+            LayerGpu gpuLayer;
+            gpuLayer.tex = gpu::Texture::fromImage<std::uint8_t>(layer.pixels());
+            gpuLayer.fbo = gpu::Framebuffer(gpuLayer.tex);
+            m_layers.emplace(layer.id(), std::move(gpuLayer));
         }
         else if (!dirty.empty())
         {
@@ -126,7 +126,7 @@ void OpenGLEngine::composite(const doc::Document &doc)
     int backdrop = 0;
     for (std::size_t i = 0; i < visible.size(); ++i)
     {
-        const doc::LayerProps &p = visible[i]->props();
+        const doc::LayerProps &props = visible[i]->props();
         const bool last = i + 1 == visible.size();
         const gpu::Framebuffer &dst = last ? m_composite_fbo : m_scratch_fbo[1 - backdrop];
         const gpu::Texture *source = &m_layers.at(visible[i]->id()).tex;
@@ -136,7 +136,7 @@ void OpenGLEngine::composite(const doc::Document &doc)
             applyStamp(*m_stroke, *source);
             source = &m_applied;
         }
-        m_renderer.composite(m_scratch[backdrop], *source, p.opacity, p.blend, dst);
+        m_renderer.composite(m_scratch[backdrop], *source, props.opacity, props.blend, dst);
         backdrop = 1 - backdrop;
     }
 }
@@ -173,8 +173,8 @@ void OpenGLEngine::stampDabs(std::span<const core::Vec2f> centers, float diamete
         return;
     m_renderer.drawDabs(m_coverage_fbo, centers, diameter, hardness, flow);
     const int reach = int(std::ceil(diameter * 0.5f)) + 2;
-    for (core::Vec2f c : centers)
-        m_stroke->rect = core::unite(m_stroke->rect, {int(std::floor(c.x)) - reach, int(std::floor(c.y)) - reach, 2 * reach + 1, 2 * reach + 1});
+    for (core::Vec2f center : centers)
+        m_stroke->rect = core::unite(m_stroke->rect, {int(std::floor(center.x)) - reach, int(std::floor(center.y)) - reach, 2 * reach + 1, 2 * reach + 1});
     m_stroke->rect = core::intersect(m_stroke->rect, {0, 0, m_coverage.width(), m_coverage.height()});
     m_stale = true;
 }
@@ -197,9 +197,9 @@ void OpenGLEngine::strokePoints(const doc::Document &doc, std::span<const core::
     m_renderer.drawPoints(it->second.fbo, pixels, color, size, doc.hasSelection() ? &m_selection : nullptr);
     // Each square spans pixel + 0.5 +- size / 2
     const int reach = int(std::ceil(size * 0.5f));
-    for (core::Vec2f p : pixels)
+    for (core::Vec2f pixel : pixels)
     {
-        const int x = int(p.x), y = int(p.y);
+        const int x = int(pixel.x), y = int(pixel.y);
         m_stroke->rect = core::unite(m_stroke->rect, {x - reach, y - reach, 2 * reach + 1, 2 * reach + 1});
     }
     m_stroke->rect = core::intersect(m_stroke->rect, {0, 0, it->second.tex.width(), it->second.tex.height()});

@@ -50,7 +50,7 @@ namespace gpu
         throw std::invalid_argument("gpu::formatInfo: unknown pixel format");
     }
 
-    Texture::Texture(int width, int height, core::PixelFormat format) : m_w(width), m_h(height), m_format(format)
+    Texture::Texture(int width, int height, core::PixelFormat format) : m_width(width), m_height(height), m_format(format)
     {
         if (width <= 0 || height <= 0)
             throw std::invalid_argument("gpu::Texture: empty size");
@@ -81,29 +81,29 @@ namespace gpu
         return empty() ? 0 : formatInfo(m_format).channels;
     }
 
-    void Texture::uploadRaw(int x, int y, const void *px, int w, int h, int c, std::ptrdiff_t stride, GLenum type)
+    void Texture::uploadRaw(int x, int y, const void *px, int width, int height, int channels, std::ptrdiff_t stride, GLenum type)
     {
         if (empty())
             throw std::logic_error("gpu::Texture::upload on an empty texture");
         const FormatInfo info = formatInfo(m_format);
-        if (x < 0 || y < 0 || x + w > m_w || y + h > m_h || c != info.channels || type != info.type)
+        if (x < 0 || y < 0 || x + width > m_width || y + height > m_height || channels != info.channels || type != info.type)
             throw std::invalid_argument("gpu::Texture::upload: image does not fit the texture (" +
-                                        std::to_string(w) + "x" + std::to_string(h) + "x" + std::to_string(c) + " at " +
+                                        std::to_string(width) + "x" + std::to_string(height) + "x" + std::to_string(channels) + " at " +
                                         std::to_string(x) + ", " + std::to_string(y) + ")");
-        PixelStore store(GL_UNPACK_ALIGNMENT, GL_UNPACK_ROW_LENGTH, GLint(stride / c));
-        glTextureSubImage2D(m_tex.get(), 0, x, y, w, h, info.format, info.type, px);
+        PixelStore store(GL_UNPACK_ALIGNMENT, GL_UNPACK_ROW_LENGTH, GLint(stride / channels));
+        glTextureSubImage2D(m_tex.get(), 0, x, y, width, height, info.format, info.type, px);
     }
 
     void Texture::upload(core::ImageView<const std::uint8_t> image)
     {
-        if (image.width() != m_w || image.height() != m_h)
+        if (image.width() != m_width || image.height() != m_height)
             throw std::invalid_argument("gpu::Texture::upload: image size is not the texture's");
         uploadRaw(0, 0, image.row(0), image.width(), image.height(), image.channels(), image.stride(), GL_UNSIGNED_BYTE);
     }
 
     void Texture::upload(core::ImageView<const float> image)
     {
-        if (image.width() != m_w || image.height() != m_h)
+        if (image.width() != m_width || image.height() != m_height)
             throw std::invalid_argument("gpu::Texture::upload: image size is not the texture's");
         uploadRaw(0, 0, image.row(0), image.width(), image.height(), image.channels(), image.stride(), GL_FLOAT);
     }
@@ -121,7 +121,7 @@ namespace gpu
         const FormatInfo info = formatInfo(m_format);
         if (info.type != GL_UNSIGNED_BYTE)
             throw std::logic_error("gpu::Texture::download8 on a non 8-bit texture");
-        core::Image<std::uint8_t> image(m_w, m_h, info.channels);
+        core::Image<std::uint8_t> image(m_width, m_height, info.channels);
         PixelStore store(GL_PACK_ALIGNMENT, GL_PACK_ROW_LENGTH, 0);
         glGetTextureImage(m_tex.get(), 0, info.format, info.type, GLsizei(image.size()), image.data());
         return image;
@@ -134,7 +134,7 @@ namespace gpu
         const FormatInfo info = formatInfo(m_format);
         if (info.type != GL_FLOAT)
             throw std::logic_error("gpu::Texture::downloadFloat on a non-float texture");
-        core::Image<float> image(m_w, m_h, info.channels, core::ColorSpace::Linear);
+        core::Image<float> image(m_width, m_height, info.channels, core::ColorSpace::Linear);
         PixelStore store(GL_PACK_ALIGNMENT, GL_PACK_ROW_LENGTH, 0);
         glGetTextureImage(m_tex.get(), 0, info.format, info.type, GLsizei(image.size() * sizeof(float)), image.data());
         return image;
@@ -147,7 +147,7 @@ namespace gpu
         const FormatInfo info = formatInfo(m_format);
         if (info.type != GL_UNSIGNED_BYTE)
             throw std::logic_error("gpu::Texture::download8 on a non 8-bit texture");
-        if (rect.x < 0 || rect.y < 0 || rect.right() > m_w || rect.bottom() > m_h)
+        if (rect.x < 0 || rect.y < 0 || rect.right() > m_width || rect.bottom() > m_height)
             throw std::invalid_argument("gpu::Texture::download8: rectangle outside the texture");
         core::Image<std::uint8_t> image(rect.w, rect.h, info.channels);
         PixelStore store(GL_PACK_ALIGNMENT, GL_PACK_ROW_LENGTH, 0);
